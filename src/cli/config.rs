@@ -91,6 +91,7 @@ fn validate_model_id(model_id: &str) -> Result<(), String> {
         "gpt-4-turbo",
         "gpt-4o",
         "gpt-4o-mini",
+        "gpt-5-mini",
     ];
 
     if valid_models.contains(&model_id) {

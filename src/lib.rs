@@ -95,6 +95,10 @@ impl<A: Chat> Vy<A> {
         println!("│  🤖 Welcome to Vy - Your AI Assistant                           │");
         println!("│  Model: {:<52} │", self.model_id);
         println!("│                                                                 │");
+        if self.model_id == "gpt-5-mini" {
+            println!("│  ⚠️  Note: Google search is disabled for gpt-5-mini compatibility │");
+            println!("│                                                                 │");
+        }
         println!("│  Commands:                                                      │");
         println!("│    • 'exit', 'quit', 'bye', 'q' - End conversation              │");
         println!("│    • 'help' - Show available commands                           │");
