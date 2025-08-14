@@ -7,13 +7,15 @@ pub mod tools;
 pub struct Vy<A: Chat> {
     agent: A,
     conversation_history: Vec<Message>,
+    model_id: String,
 }
 
 impl<A: Chat> Vy<A> {
-    pub fn new(agent: A) -> Self {
+    pub fn new(agent: A, model_id: String) -> Self {
         Self {
             agent,
             conversation_history: Vec::new(),
+            model_id,
         }
     }
 
@@ -91,6 +93,7 @@ impl<A: Chat> Vy<A> {
     fn print_welcome(&self) {
         println!("┌─────────────────────────────────────────────────────────────────┐");
         println!("│  🤖 Welcome to Vy - Your AI Assistant                           │");
+        println!("│  Model: {:<52} │", self.model_id);
         println!("│                                                                 │");
         println!("│  Commands:                                                      │");
         println!("│    • 'exit', 'quit', 'bye', 'q' - End conversation              │");

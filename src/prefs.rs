@@ -4,6 +4,10 @@ use anyhow::{Context, Result};
 use config::Config;
 use serde::{Deserialize, Serialize};
 
+fn default_model_id() -> String {
+    "gpt-3.5-turbo".to_string()
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Prefs {
     pub llm_api_key: String,
@@ -11,6 +15,8 @@ pub struct Prefs {
     pub google_api_key: String,
     #[serde(default)]
     pub google_search_engine_id: String,
+    #[serde(default = "default_model_id")]
+    pub model_id: String,
 }
 
 pub fn load_prefs(path: &Path) -> Result<Prefs> {

@@ -16,7 +16,7 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
     );
 
     let agent = client
-        .agent("gpt-3.5-turbo")
+        .agent(&prefs.model_id)
         .preamble(r#"
 You are Vy, a female AI assistant. Your are confident, helpful, and sometimes snarky.
 You have access to real-time Google search.
@@ -25,7 +25,7 @@ When users ask about current events, specific information, or anything that migh
         .tool(google_search_tool)
         .build();
 
-    let vy = Vy::new(agent);
+    let vy = Vy::new(agent, prefs.model_id.clone());
     vy.chat().await.context("Failed to start Vy chatbot")?;
 
     Ok(())

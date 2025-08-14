@@ -11,6 +11,7 @@ pub enum ConfigKey {
     LlmApiKey,
     GoogleApiKey,
     GoogleSearchEngineId,
+    ModelId,
 }
 
 impl ConfigKey {
@@ -19,6 +20,7 @@ impl ConfigKey {
             "llm_api_key" => Some(Self::LlmApiKey),
             "google_api_key" => Some(Self::GoogleApiKey),
             "google_search_engine_id" => Some(Self::GoogleSearchEngineId),
+            "model_id" => Some(Self::ModelId),
             _ => None,
         }
     }
@@ -28,6 +30,7 @@ impl ConfigKey {
             Self::LlmApiKey => "llm_api_key",
             Self::GoogleApiKey => "google_api_key",
             Self::GoogleSearchEngineId => "google_search_engine_id",
+            Self::ModelId => "model_id",
         }
     }
 
@@ -40,6 +43,7 @@ impl ConfigKey {
             Self::LlmApiKey => &prefs.llm_api_key,
             Self::GoogleApiKey => &prefs.google_api_key,
             Self::GoogleSearchEngineId => &prefs.google_search_engine_id,
+            Self::ModelId => &prefs.model_id,
         }
     }
 
@@ -48,6 +52,7 @@ impl ConfigKey {
             Self::LlmApiKey => prefs.llm_api_key = value,
             Self::GoogleApiKey => prefs.google_api_key = value,
             Self::GoogleSearchEngineId => prefs.google_search_engine_id = value,
+            Self::ModelId => prefs.model_id = value,
         }
     }
 
@@ -56,6 +61,7 @@ impl ConfigKey {
             Self::LlmApiKey,
             Self::GoogleApiKey,
             Self::GoogleSearchEngineId,
+            Self::ModelId,
         ]
     }
 }
@@ -76,6 +82,26 @@ pub enum ConfigAction {
     },
     /// List all configuration values
     List,
+}
+
+fn validate_model_id(model_id: &str) -> Result<(), String> {
+    let valid_models = [
+        "gpt-3.5-turbo",
+        "gpt-4",
+        "gpt-4-turbo",
+        "gpt-4o",
+        "gpt-4o-mini",
+    ];
+
+    if valid_models.contains(&model_id) {
+        Ok(())
+    } else {
+        Err(format!(
+            "Model '{}' is not in the list of common models. Valid options: {}",
+            model_id,
+            valid_models.join(", ")
+        ))
+    }
 }
 
 fn mask_sensitive_value(value: &str) -> String {
@@ -132,6 +158,7 @@ pub fn run_config(
                     llm_api_key: String::new(),
                     google_api_key: String::new(),
                     google_search_engine_id: String::new(),
+                    model_id: "gpt-3.5-turbo".to_string(),
                 }
             });
 
@@ -156,6 +183,25 @@ pub fn run_config(
             if actual_value.trim().is_empty() {
                 eprintln!("Error: {} cannot be empty", config_key.as_str());
                 std::process::exit(1);
+            }
+
+            // Validate model_id if that's what we're setting
+            if matches!(config_key, ConfigKey::ModelId) {
+                if let Err(warning) = validate_model_id(&actual_value) {
+                    println!("⚠️  Warning: {}", warning);
+                    print!("Continue anyway? (y/N): ");
+                    std::io::stdout()
+                        .flush()
+                        .context("Failed to flush stdout")?;
+                    let mut input = String::new();
+                    std::io::stdin()
+                        .read_line(&mut input)
+                        .context("Failed to read input")?;
+                    if !input.trim().to_lowercase().starts_with('y') {
+                        println!("Operation cancelled.");
+                        return Ok(());
+                    }
+                }
             }
 
             config_key.set_value(&mut prefs, actual_value);
