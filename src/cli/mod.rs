@@ -164,7 +164,7 @@ impl Cli {
                 let prefs = self.load_prefs().context("Failed to load configuration. Make sure the config file exists or use 'config set' to create it.")?;
 
                 let config_key = ConfigKey::from_str(key).unwrap_or_else(|| {
-                    eprintln!("Unknown configuration key: {}", key);
+                    eprintln!("Unknown configuration key: {key}");
                     eprintln!("{}", available_keys_message());
                     std::process::exit(1);
                 });
@@ -182,7 +182,7 @@ impl Cli {
             }
             ConfigAction::Set { key, value } => {
                 let config_key = ConfigKey::from_str(key).unwrap_or_else(|| {
-                    eprintln!("Unknown configuration key: {}", key);
+                    eprintln!("Unknown configuration key: {key}");
                     eprintln!("{}", available_keys_message());
                     std::process::exit(1);
                 });
@@ -202,17 +202,14 @@ impl Cli {
                     v.clone()
                 } else if config_key.is_sensitive() {
                     // Interactive input for sensitive keys
-                    print!("Enter value for '{}' (input will be hidden): ", key);
+                    print!("Enter value for '{key}' (input will be hidden): ");
                     use std::io::{self, Write};
                     io::stdout().flush().context("Failed to flush stdout")?;
                     rpassword::read_password().context("Failed to read input")?
                 } else {
                     // For non-sensitive keys, require the value to be provided
-                    eprintln!(
-                        "Error: Value must be provided for non-sensitive key '{}'",
-                        key
-                    );
-                    eprintln!("Usage: vy config set {} <value>", key);
+                    eprintln!("Error: Value must be provided for non-sensitive key '{key}'");
+                    eprintln!("Usage: vy config set {key} <value>");
                     std::process::exit(1);
                 };
 

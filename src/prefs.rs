@@ -41,7 +41,7 @@ pub fn save_prefs(prefs: &Prefs, path: &Path) -> Result<()> {
 
     let toml_string = toml::to_string_pretty(prefs).context("Failed to serialize prefs")?;
 
-    fs::write(&path, toml_string)
+    fs::write(path, toml_string)
         .with_context(|| format!("Failed to write prefs to file at {}", path.display()))?;
 
     Ok(())
