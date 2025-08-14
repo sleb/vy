@@ -2,6 +2,7 @@ use anyhow::Result;
 use rig::completion::{Chat, Message};
 use std::io::{self, Write};
 
+pub mod memory;
 pub mod tools;
 
 pub struct Vy<A: Chat> {
