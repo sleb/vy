@@ -11,7 +11,7 @@ async fn main() {
     env_logger::init();
 
     let cli = Cli::parse();
-    println!("CLI: {cli:#?}");
+    debug!("CLI: {cli:#?}");
 
     if let Err(e) = cli.run().await {
         debug!("Error: {e:?}");
