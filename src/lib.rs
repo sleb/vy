@@ -1,19 +1,23 @@
 use anyhow::Result;
-use rig::completion::Chat;
+use rig::completion::{Chat, Message};
 use std::io::{self, Write};
 
 pub mod tools;
 
 pub struct Vy<A: Chat> {
     agent: A,
+    conversation_history: Vec<Message>,
 }
 
 impl<A: Chat> Vy<A> {
     pub fn new(agent: A) -> Self {
-        Self { agent }
+        Self {
+            agent,
+            conversation_history: Vec::new(),
+        }
     }
 
-    pub async fn chat(self) -> Result<()> {
+    pub async fn chat(mut self) -> Result<()> {
         self.print_welcome();
 
         loop {
@@ -39,14 +43,32 @@ impl<A: Chat> Vy<A> {
                 continue;
             }
 
-            // Show thinking indicator
-            print!("🤖 Vy: ");
+            // Show thinking indicator with conversation context
+            let msg_count = self.conversation_history.len();
+            print!(
+                "🤖 Vy ({}): ",
+                if msg_count > 0 {
+                    format!("{} msgs", msg_count)
+                } else {
+                    "new chat".to_string()
+                }
+            );
             io::stdout().flush()?;
 
+            // Add user message to history
+            self.conversation_history.push(Message::user(input));
+
             // Get response from agent with error handling
-            match self.agent.chat(input, vec![]).await {
+            match self
+                .agent
+                .chat(input, self.conversation_history.clone())
+                .await
+            {
                 Ok(response) => {
                     println!("{}", response);
+                    // Add assistant response to history
+                    self.conversation_history
+                        .push(Message::assistant(&response));
                 }
                 Err(e) => {
                     let formatted_error = Self::format_error(&e);
@@ -73,6 +95,7 @@ impl<A: Chat> Vy<A> {
         println!("│  Commands:                                                      │");
         println!("│    • 'exit', 'quit', 'bye', 'q' - End conversation              │");
         println!("│    • 'help' - Show available commands                           │");
+        println!("│    • 'history' - Show conversation history                      │");
         println!("│    • 'clear' - Clear conversation history                       │");
         println!("└─────────────────────────────────────────────────────────────────┘");
         println!();
@@ -86,18 +109,31 @@ impl<A: Chat> Vy<A> {
         }
     }
 
-    fn is_non_exit_command(&self, input: &str) -> bool {
+    fn is_non_exit_command(&mut self, input: &str) -> bool {
         let input_lower = input.to_lowercase();
         match input_lower.as_str() {
             "help" => {
                 self.print_help();
                 true
             }
+            "history" => {
+                self.print_history();
+                true
+            }
             "clear" => {
                 // Clear screen (works on most terminals)
                 print!("\x1B[2J\x1B[1;1H");
                 io::stdout().flush().ok();
+                // Clear conversation history
+                let cleared_count = self.conversation_history.len();
+                self.conversation_history.clear();
                 self.print_welcome();
+                if cleared_count > 0 {
+                    println!(
+                        "🧹 Cleared {} messages from conversation history.\n",
+                        cleared_count
+                    );
+                }
                 true
             }
             _ => false,
@@ -108,9 +144,23 @@ impl<A: Chat> Vy<A> {
         println!("📚 Available Commands:");
         println!("  • exit, quit, bye, q  - End the conversation");
         println!("  • help                - Show this help message");
+        println!("  • history             - Show conversation history");
         println!("  • clear               - Clear the screen and start fresh");
         println!("  • Just type naturally to chat with Vy!");
         println!();
+    }
+
+    fn print_history(&self) {
+        if self.conversation_history.is_empty() {
+            println!("📝 No conversation history yet.\n");
+            return;
+        }
+
+        println!(
+            "📝 Conversation History: {} messages stored",
+            self.conversation_history.len()
+        );
+        println!("   (Alternating: You → Vy → You → Vy...)\n");
     }
 
     fn print_goodbye(&self) {
