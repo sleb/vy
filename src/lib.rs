@@ -1,12 +1,14 @@
 use anyhow::Result;
-use rig::completion::Prompt;
+use rig::completion::Chat;
 use std::io::{self, Write};
 
-pub struct Vy<A: Prompt> {
+pub mod tools;
+
+pub struct Vy<A: Chat> {
     agent: A,
 }
 
-impl<A: Prompt> Vy<A> {
+impl<A: Chat> Vy<A> {
     pub fn new(agent: A) -> Self {
         Self { agent }
     }
@@ -42,7 +44,7 @@ impl<A: Prompt> Vy<A> {
             io::stdout().flush()?;
 
             // Get response from agent with error handling
-            match self.agent.prompt(input).await {
+            match self.agent.chat(input, vec![]).await {
                 Ok(response) => {
                     println!("{}", response);
                 }

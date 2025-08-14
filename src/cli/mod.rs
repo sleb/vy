@@ -6,7 +6,7 @@ use std::{
 use anyhow::{Context, Result};
 use log::debug;
 use rig::{client::completion::CompletionClientDyn, providers::openai};
-use vy::Vy;
+use vy::{Vy, tools::GoogleSearchTool};
 
 use crate::prefs::{self, Prefs};
 
@@ -144,7 +144,17 @@ impl Cli {
             .build()
             .context("Failed to create LLM client")?;
 
-        let agent = client.agent("gpt-5-nano").preamble("you are a helpful, female, chatbot with a slightly snarky tone. You provide thoughtful and helpful resposes to the user's queries").build();
+        // Create Google Search tool with config values
+        let google_search_tool = GoogleSearchTool::new(
+            prefs.google_api_key.clone(),
+            prefs.google_search_engine_id.clone(),
+        );
+
+        let agent = client
+            .agent("gpt-3.5-turbo")
+            .preamble("You are Vy, a helpful AI assistant with access to real-time Google search. You can search for current information, news, facts, and answers to questions. When users ask about current events, specific information, or anything that might benefit from a web search, use the google_search tool to provide accurate and up-to-date information.")
+            .tool(google_search_tool)
+            .build();
 
         let vy = Vy::new(agent);
         vy.chat().await.context("Failed to start Vy chatbot")?;
