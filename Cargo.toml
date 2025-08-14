@@ -4,3 +4,16 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.99"
+clap = { version = "4.5.45", features = ["derive"] }
+config = "0.15.14"
+directories = "6.0.0"
+env_logger = "0.11.8"
+log = "0.4.27"
+rig-core = "0.17.1"
+serde = { version = "1.0.219", features = ["derive"] }
+tokio = { version = "1.47.1", features = ["full"] }
+toml = "0.9.5"
+
+[dev-dependencies]
+tempfile = "3.8"
