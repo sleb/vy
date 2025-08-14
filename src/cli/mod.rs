@@ -53,8 +53,8 @@ enum ConfigAction {
     Set {
         /// The configuration key to set
         key: String,
-        /// The value to set
-        value: String,
+        /// The value to set (omit for interactive input on sensitive keys like API keys)
+        value: Option<String>,
     },
     /// List all configuration values
     List,
@@ -81,6 +81,15 @@ impl Cli {
         vy.chat().await.context("Failed to start Vy chatbot")?;
 
         Ok(())
+    }
+
+    fn is_sensitive_key(key: &str) -> bool {
+        let key_lower = key.to_lowercase();
+        key_lower.contains("key")
+            || key_lower.contains("token")
+            || key_lower.contains("secret")
+            || key_lower.contains("password")
+            || key_lower.contains("auth")
     }
 
     async fn run_config(&self, action: &ConfigAction) -> Result<()> {
@@ -111,6 +120,7 @@ impl Cli {
                             println!("llm_api_key: {}", masked);
                         }
                     }
+
                     _ => {
                         eprintln!("Unknown configuration key: {}", key);
                         eprintln!("Available keys: llm_api_key");
@@ -126,18 +136,39 @@ impl Cli {
                     }
                 });
 
+                // Determine the actual value to use
+                let actual_value = if let Some(v) = value {
+                    // Value provided on command line
+                    v.clone()
+                } else if Self::is_sensitive_key(key) {
+                    // Interactive input for sensitive keys
+                    print!("Enter value for '{}' (input will be hidden): ", key);
+                    use std::io::{self, Write};
+                    io::stdout().flush().context("Failed to flush stdout")?;
+                    rpassword::read_password().context("Failed to read input")?
+                } else {
+                    // For non-sensitive keys, require the value to be provided
+                    eprintln!(
+                        "Error: Value must be provided for non-sensitive key '{}'",
+                        key
+                    );
+                    eprintln!("Usage: vy config set {} <value>", key);
+                    std::process::exit(1);
+                };
+
                 match key.as_str() {
                     "llm_api_key" => {
-                        if value.trim().is_empty() {
+                        if actual_value.trim().is_empty() {
                             eprintln!("Error: API key cannot be empty");
                             std::process::exit(1);
                         }
-                        prefs.llm_api_key = value.clone();
+                        prefs.llm_api_key = actual_value;
                         prefs::save_prefs(&prefs, prefs_path)
                             .context("Failed to save preferences")?;
                         println!("Successfully set llm_api_key");
                         println!("Configuration saved to: {}", prefs_path.display());
                     }
+
                     _ => {
                         eprintln!("Unknown configuration key: {}", key);
                         eprintln!("Available keys: llm_api_key");
