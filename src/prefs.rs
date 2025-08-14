@@ -7,6 +7,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Prefs {
     pub llm_api_key: String,
+    #[serde(default)]
+    pub google_api_key: String,
+    #[serde(default)]
+    pub google_search_engine_id: String,
 }
 
 pub fn load_prefs(path: &Path) -> Result<Prefs> {

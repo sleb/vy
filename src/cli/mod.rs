@@ -10,6 +10,75 @@ use vy::Vy;
 
 use crate::prefs::{self, Prefs};
 
+#[derive(Debug, Clone)]
+enum ConfigKey {
+    LlmApiKey,
+    GoogleApiKey,
+    GoogleSearchEngineId,
+}
+
+impl ConfigKey {
+    fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "llm_api_key" => Some(Self::LlmApiKey),
+            "google_api_key" => Some(Self::GoogleApiKey),
+            "google_search_engine_id" => Some(Self::GoogleSearchEngineId),
+            _ => None,
+        }
+    }
+
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::LlmApiKey => "llm_api_key",
+            Self::GoogleApiKey => "google_api_key",
+            Self::GoogleSearchEngineId => "google_search_engine_id",
+        }
+    }
+
+    fn is_sensitive(&self) -> bool {
+        matches!(self, Self::LlmApiKey | Self::GoogleApiKey)
+    }
+
+    fn get_value<'a>(&self, prefs: &'a Prefs) -> &'a str {
+        match self {
+            Self::LlmApiKey => &prefs.llm_api_key,
+            Self::GoogleApiKey => &prefs.google_api_key,
+            Self::GoogleSearchEngineId => &prefs.google_search_engine_id,
+        }
+    }
+
+    fn set_value(&self, prefs: &mut Prefs, value: String) {
+        match self {
+            Self::LlmApiKey => prefs.llm_api_key = value,
+            Self::GoogleApiKey => prefs.google_api_key = value,
+            Self::GoogleSearchEngineId => prefs.google_search_engine_id = value,
+        }
+    }
+
+    fn all_keys() -> &'static [ConfigKey] {
+        &[
+            Self::LlmApiKey,
+            Self::GoogleApiKey,
+            Self::GoogleSearchEngineId,
+        ]
+    }
+}
+
+fn mask_sensitive_value(value: &str) -> String {
+    if value.is_empty() {
+        "(not set)".to_string()
+    } else if value.len() > 8 {
+        format!("{}...{}", &value[..4], &value[value.len() - 4..])
+    } else {
+        "[HIDDEN]".to_string()
+    }
+}
+
+fn available_keys_message() -> String {
+    let keys: Vec<&str> = ConfigKey::all_keys().iter().map(|k| k.as_str()).collect();
+    format!("Available keys: {}", keys.join(", "))
+}
+
 static DEFAULT_PREFS_PATH: OnceLock<Option<PathBuf>> = OnceLock::new();
 
 fn default_prefs_path() -> Option<&'static Path> {
@@ -83,15 +152,6 @@ impl Cli {
         Ok(())
     }
 
-    fn is_sensitive_key(key: &str) -> bool {
-        let key_lower = key.to_lowercase();
-        key_lower.contains("key")
-            || key_lower.contains("token")
-            || key_lower.contains("secret")
-            || key_lower.contains("password")
-            || key_lower.contains("auth")
-    }
-
     async fn run_config(&self, action: &ConfigAction) -> Result<()> {
         let prefs_path = self
             .prefs_path
@@ -102,37 +162,37 @@ impl Cli {
         match action {
             ConfigAction::Get { key } => {
                 let prefs = self.load_prefs().context("Failed to load configuration. Make sure the config file exists or use 'config set' to create it.")?;
-                match key.as_str() {
-                    "llm_api_key" => {
-                        if prefs.llm_api_key.is_empty() {
-                            println!("llm_api_key: (not set)");
-                        } else {
-                            // Show first few characters for confirmation but hide the rest
-                            let masked = if prefs.llm_api_key.len() > 8 {
-                                format!(
-                                    "{}...{}",
-                                    &prefs.llm_api_key[..4],
-                                    &prefs.llm_api_key[prefs.llm_api_key.len() - 4..]
-                                )
-                            } else {
-                                "[HIDDEN]".to_string()
-                            };
-                            println!("llm_api_key: {}", masked);
-                        }
-                    }
 
-                    _ => {
-                        eprintln!("Unknown configuration key: {}", key);
-                        eprintln!("Available keys: llm_api_key");
-                        std::process::exit(1);
-                    }
-                }
+                let config_key = ConfigKey::from_str(key).unwrap_or_else(|| {
+                    eprintln!("Unknown configuration key: {}", key);
+                    eprintln!("{}", available_keys_message());
+                    std::process::exit(1);
+                });
+
+                let value = config_key.get_value(&prefs);
+                let display_value = if config_key.is_sensitive() {
+                    mask_sensitive_value(value)
+                } else if value.is_empty() {
+                    "(not set)".to_string()
+                } else {
+                    value.to_string()
+                };
+
+                println!("{}: {}", config_key.as_str(), display_value);
             }
             ConfigAction::Set { key, value } => {
+                let config_key = ConfigKey::from_str(key).unwrap_or_else(|| {
+                    eprintln!("Unknown configuration key: {}", key);
+                    eprintln!("{}", available_keys_message());
+                    std::process::exit(1);
+                });
+
                 let mut prefs = self.load_prefs().unwrap_or_else(|_| {
                     debug!("Creating new preferences file");
                     Prefs {
                         llm_api_key: String::new(),
+                        google_api_key: String::new(),
+                        google_search_engine_id: String::new(),
                     }
                 });
 
@@ -140,7 +200,7 @@ impl Cli {
                 let actual_value = if let Some(v) = value {
                     // Value provided on command line
                     v.clone()
-                } else if Self::is_sensitive_key(key) {
+                } else if config_key.is_sensitive() {
                     // Interactive input for sensitive keys
                     print!("Enter value for '{}' (input will be hidden): ", key);
                     use std::io::{self, Write};
@@ -156,43 +216,31 @@ impl Cli {
                     std::process::exit(1);
                 };
 
-                match key.as_str() {
-                    "llm_api_key" => {
-                        if actual_value.trim().is_empty() {
-                            eprintln!("Error: API key cannot be empty");
-                            std::process::exit(1);
-                        }
-                        prefs.llm_api_key = actual_value;
-                        prefs::save_prefs(&prefs, prefs_path)
-                            .context("Failed to save preferences")?;
-                        println!("Successfully set llm_api_key");
-                        println!("Configuration saved to: {}", prefs_path.display());
-                    }
-
-                    _ => {
-                        eprintln!("Unknown configuration key: {}", key);
-                        eprintln!("Available keys: llm_api_key");
-                        std::process::exit(1);
-                    }
+                if actual_value.trim().is_empty() {
+                    eprintln!("Error: {} cannot be empty", config_key.as_str());
+                    std::process::exit(1);
                 }
+
+                config_key.set_value(&mut prefs, actual_value);
+                prefs::save_prefs(&prefs, prefs_path).context("Failed to save preferences")?;
+                println!("Successfully set {}", config_key.as_str());
+                println!("Configuration saved to: {}", prefs_path.display());
             }
             ConfigAction::List => {
                 let prefs = self.load_prefs().context("Failed to load configuration. Make sure the config file exists or use 'config set' to create it.")?;
                 println!("Configuration file: {}", prefs_path.display());
                 println!("Available settings:");
-                if prefs.llm_api_key.is_empty() {
-                    println!("  llm_api_key: (not set)");
-                } else {
-                    let masked = if prefs.llm_api_key.len() > 8 {
-                        format!(
-                            "{}...{}",
-                            &prefs.llm_api_key[..4],
-                            &prefs.llm_api_key[prefs.llm_api_key.len() - 4..]
-                        )
+
+                for config_key in ConfigKey::all_keys() {
+                    let value = config_key.get_value(&prefs);
+                    let display_value = if config_key.is_sensitive() {
+                        mask_sensitive_value(value)
+                    } else if value.is_empty() {
+                        "(not set)".to_string()
                     } else {
-                        "[HIDDEN]".to_string()
+                        value.to_string()
                     };
-                    println!("  llm_api_key: {}", masked);
+                    println!("  {}: {}", config_key.as_str(), display_value);
                 }
             }
         }
