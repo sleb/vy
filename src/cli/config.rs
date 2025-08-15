@@ -12,6 +12,9 @@ pub enum ConfigKey {
     GoogleApiKey,
     GoogleSearchEngineId,
     ModelId,
+    MemoryModelId,
+    MemorySimilarityModelId,
+    MemoryPreamble,
 }
 
 impl ConfigKey {
@@ -21,6 +24,9 @@ impl ConfigKey {
             "google_api_key" => Some(Self::GoogleApiKey),
             "google_search_engine_id" => Some(Self::GoogleSearchEngineId),
             "model_id" => Some(Self::ModelId),
+            "memory_model_id" => Some(Self::MemoryModelId),
+            "memory_similarity_model_id" => Some(Self::MemorySimilarityModelId),
+            "memory_preamble" => Some(Self::MemoryPreamble),
             _ => None,
         }
     }
@@ -31,6 +37,9 @@ impl ConfigKey {
             Self::GoogleApiKey => "google_api_key",
             Self::GoogleSearchEngineId => "google_search_engine_id",
             Self::ModelId => "model_id",
+            Self::MemoryModelId => "memory_model_id",
+            Self::MemorySimilarityModelId => "memory_similarity_model_id",
+            Self::MemoryPreamble => "memory_preamble",
         }
     }
 
@@ -44,6 +53,9 @@ impl ConfigKey {
             Self::GoogleApiKey => &prefs.google_api_key,
             Self::GoogleSearchEngineId => &prefs.google_search_engine_id,
             Self::ModelId => &prefs.model_id,
+            Self::MemoryModelId => &prefs.memory_model_id,
+            Self::MemorySimilarityModelId => &prefs.memory_similarity_model_id,
+            Self::MemoryPreamble => &prefs.memory_preamble,
         }
     }
 
@@ -53,6 +65,9 @@ impl ConfigKey {
             Self::GoogleApiKey => prefs.google_api_key = value,
             Self::GoogleSearchEngineId => prefs.google_search_engine_id = value,
             Self::ModelId => prefs.model_id = value,
+            Self::MemoryModelId => prefs.memory_model_id = value,
+            Self::MemorySimilarityModelId => prefs.memory_similarity_model_id = value,
+            Self::MemoryPreamble => prefs.memory_preamble = value,
         }
     }
 
@@ -62,6 +77,9 @@ impl ConfigKey {
             Self::GoogleApiKey,
             Self::GoogleSearchEngineId,
             Self::ModelId,
+            Self::MemoryModelId,
+            Self::MemorySimilarityModelId,
+            Self::MemoryPreamble,
         ]
     }
 }
@@ -161,6 +179,9 @@ pub fn run_config(
                     google_search_engine_id: String::new(),
                     model_id: "gpt-3.5-turbo".to_string(),
                     preamble: crate::prefs::default_preamble(),
+                    memory_model_id: "gpt-4".to_string(),
+                    memory_similarity_model_id: "gpt-3.5-turbo".to_string(),
+                    memory_preamble: crate::prefs::default_memory_preamble(),
                 }
             });
 
@@ -188,7 +209,10 @@ pub fn run_config(
             }
 
             // Validate model_id if that's what we're setting
-            if matches!(config_key, ConfigKey::ModelId) {
+            if matches!(
+                config_key,
+                ConfigKey::ModelId | ConfigKey::MemoryModelId | ConfigKey::MemorySimilarityModelId
+            ) {
                 if let Err(warning) = validate_model_id(&actual_value) {
                     println!("⚠️  Warning: {warning}");
                     print!("Continue anyway? (y/N): ");

@@ -49,7 +49,13 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
         .tool(smart_memory_update_tool)
         .build();
 
-    let vy = Vy::new(agent, prefs.model_id.clone(), prefs.llm_api_key.clone());
+    let vy = Vy::new(
+        agent,
+        prefs.model_id.clone(),
+        prefs.llm_api_key.clone(),
+        prefs.memory_model_id.clone(),
+        prefs.memory_preamble.clone(),
+    );
     vy.chat().await.context("Failed to start Vy chatbot")?;
 
     Ok(())

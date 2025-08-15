@@ -58,23 +58,41 @@ impl SimpleMemoryCommand {
         match self {
             SimpleMemoryCommand::Add { fact } => {
                 // Load API key for LLM-based extraction
-                let api_key = std::env::var("OPENAI_API_KEY").or_else(|_| {
-                    // Try to load from config file
-                    if let Some(proj_dirs) = directories::ProjectDirs::from("vy", "", "") {
-                        let config_path = proj_dirs.config_dir().join("prefs.toml");
-                        match crate::prefs::load_prefs(&config_path) {
-                            Ok(prefs) => Ok(prefs.llm_api_key),
-                            Err(_) => Err("No API key found".to_string()),
+                // Load preferences for API key and memory settings
+                let prefs = std::env::var("OPENAI_API_KEY")
+                    .map(|key| {
+                        // Use environment API key with default memory settings
+                        crate::prefs::Prefs {
+                            llm_api_key: key,
+                            google_api_key: String::new(),
+                            google_search_engine_id: String::new(),
+                            model_id: "gpt-3.5-turbo".to_string(),
+                            preamble: crate::prefs::default_preamble(),
+                            memory_model_id: "gpt-4".to_string(),
+                            memory_similarity_model_id: "gpt-3.5-turbo".to_string(),
+                            memory_preamble: crate::prefs::default_memory_preamble(),
                         }
-                    } else {
-                        Err("No config directory".to_string())
-                    }
-                });
+                    })
+                    .or_else(|_| {
+                        // Try to load from config file
+                        if let Some(proj_dirs) = directories::ProjectDirs::from("vy", "", "") {
+                            let config_path = proj_dirs.config_dir().join("prefs.toml");
+                            crate::prefs::load_prefs(&config_path)
+                        } else {
+                            Err(anyhow::anyhow!("No config directory"))
+                        }
+                    });
 
-                match api_key {
-                    Ok(key) if !key.is_empty() => {
+                match prefs {
+                    Ok(prefs) if !prefs.llm_api_key.is_empty() => {
                         memory
-                            .learn_from_input(&fact, "manual".to_string(), &key)
+                            .learn_from_input(
+                                &fact,
+                                "manual".to_string(),
+                                &prefs.llm_api_key,
+                                &prefs.memory_model_id,
+                                &prefs.memory_preamble,
+                            )
                             .await?;
                         println!("✅ Added fact to memory: {fact}");
                     }
@@ -183,27 +201,40 @@ impl SimpleMemoryCommand {
                     }
                 }
 
-                // Try to load API key from environment or config
-                let api_key = std::env::var("OPENAI_API_KEY").or_else(|_| {
-                    // Try to load from config file
-                    if let Some(proj_dirs) = directories::ProjectDirs::from("vy", "", "") {
-                        let config_path = proj_dirs.config_dir().join("prefs.toml");
-                        match crate::prefs::load_prefs(&config_path) {
-                            Ok(prefs) => Ok(prefs.llm_api_key),
-                            Err(_) => Err("No API key found".to_string()),
+                // Load preferences for API key and memory settings
+                let prefs = std::env::var("OPENAI_API_KEY")
+                    .map(|key| {
+                        // Use environment API key with default memory settings
+                        crate::prefs::Prefs {
+                            llm_api_key: key,
+                            google_api_key: String::new(),
+                            google_search_engine_id: String::new(),
+                            model_id: "gpt-3.5-turbo".to_string(),
+                            preamble: crate::prefs::default_preamble(),
+                            memory_model_id: "gpt-4".to_string(),
+                            memory_similarity_model_id: "gpt-3.5-turbo".to_string(),
+                            memory_preamble: crate::prefs::default_memory_preamble(),
                         }
-                    } else {
-                        Err("No config directory".to_string())
-                    }
-                });
+                    })
+                    .or_else(|_| {
+                        // Try to load from config file
+                        if let Some(proj_dirs) = directories::ProjectDirs::from("vy", "", "") {
+                            let config_path = proj_dirs.config_dir().join("prefs.toml");
+                            crate::prefs::load_prefs(&config_path)
+                        } else {
+                            Err(anyhow::anyhow!("No config directory"))
+                        }
+                    });
 
-                match api_key {
-                    Ok(key) if !key.is_empty() => {
+                match prefs {
+                    Ok(prefs) if !prefs.llm_api_key.is_empty() => {
                         println!(
                             "🧹 Consolidating {} memory entries with LLM analysis...",
                             entries_before
                         );
-                        memory.vacuum(&key).await?;
+                        memory
+                            .vacuum(&prefs.llm_api_key, &prefs.memory_similarity_model_id)
+                            .await?;
                     }
                     _ => {
                         eprintln!("❌ Error: No API key found for LLM analysis.");

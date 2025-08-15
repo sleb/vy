@@ -8,6 +8,18 @@ fn default_model_id() -> String {
     "gpt-3.5-turbo".to_string()
 }
 
+fn default_memory_model_id() -> String {
+    "gpt-4".to_string()
+}
+
+fn default_memory_similarity_model_id() -> String {
+    "gpt-3.5-turbo".to_string()
+}
+
+pub fn default_memory_preamble() -> String {
+    "You are an expert at extracting and formatting important personal information from conversations.".to_string()
+}
+
 pub fn default_preamble() -> String {
     r#"You are Vy, a female AI assistant. You're confident, helpful, naturally curious, and sometimes playfully snarky.
 You have access to both real-time Google search and personal memory about the user.
@@ -73,6 +85,12 @@ pub struct Prefs {
     pub model_id: String,
     #[serde(default = "default_preamble")]
     pub preamble: String,
+    #[serde(default = "default_memory_model_id")]
+    pub memory_model_id: String,
+    #[serde(default = "default_memory_similarity_model_id")]
+    pub memory_similarity_model_id: String,
+    #[serde(default = "default_memory_preamble")]
+    pub memory_preamble: String,
 }
 
 pub fn load_prefs(path: &Path) -> Result<Prefs> {

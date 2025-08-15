@@ -56,6 +56,12 @@ enum Commands {
         #[clap(long)]
         edit: bool,
     },
+    /// Edit preferences file in your default editor
+    Prefs {
+        /// Edit the preferences file in your default editor
+        #[clap(long)]
+        edit: bool,
+    },
 }
 
 impl Cli {
@@ -83,6 +89,15 @@ impl Cli {
                     .context("Please specify a prefs path via --prefs-path")?;
 
                 self.run_preamble(*edit, prefs_path).await
+            }
+            Commands::Prefs { edit } => {
+                let prefs_path = self
+                    .prefs_path
+                    .as_deref()
+                    .or(default_prefs_path())
+                    .context("Please specify a prefs path via --prefs-path")?;
+
+                self.run_prefs(*edit, prefs_path).await
             }
         }
     }
@@ -147,6 +162,55 @@ impl Cli {
             println!("{}", prefs.preamble);
             println!("{}", "─".repeat(50));
             println!("To edit: vy preamble --edit");
+        }
+
+        Ok(())
+    }
+
+    async fn run_prefs(&self, edit: bool, prefs_path: &Path) -> Result<()> {
+        if edit {
+            // Ensure prefs file exists, create with defaults if it doesn't
+            if !prefs_path.exists() {
+                let default_prefs = Prefs {
+                    llm_api_key: String::new(),
+                    google_api_key: String::new(),
+                    google_search_engine_id: String::new(),
+                    model_id: "gpt-3.5-turbo".to_string(),
+                    preamble: prefs::default_preamble(),
+                    memory_model_id: "gpt-4".to_string(),
+                    memory_similarity_model_id: "gpt-3.5-turbo".to_string(),
+                    memory_preamble: crate::prefs::default_memory_preamble(),
+                };
+                prefs::save_prefs(&default_prefs, prefs_path)?;
+                println!(
+                    "✅ Created default preferences file at: {}",
+                    prefs_path.display()
+                );
+            }
+
+            // Open in default editor
+            let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
+            let status = std::process::Command::new(&editor)
+                .arg(prefs_path)
+                .status()
+                .with_context(|| format!("Failed to open editor: {}", editor))?;
+
+            if !status.success() {
+                anyhow::bail!("Editor exited with non-zero status");
+            }
+
+            println!("✅ Preferences file edited successfully!");
+        } else {
+            // Just display the preferences file path and some basic info
+            if prefs_path.exists() {
+                println!("Preferences file: {}", prefs_path.display());
+                println!("To edit: vy prefs --edit");
+                println!("Or use individual config commands: vy config set <key> <value>");
+            } else {
+                println!("Preferences file does not exist: {}", prefs_path.display());
+                println!("To create and edit: vy prefs --edit");
+                println!("Or use config commands: vy config set <key> <value>");
+            }
         }
 
         Ok(())

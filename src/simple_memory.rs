@@ -133,7 +133,13 @@ impl SimpleMemory {
     }
 
     /// Extract facts using LLM analysis for better memory detection
-    pub async fn extract_facts_llm(&self, user_input: &str, api_key: &str) -> Result<Vec<String>> {
+    pub async fn extract_facts_llm(
+        &self,
+        user_input: &str,
+        api_key: &str,
+        memory_model_id: &str,
+        memory_preamble: &str,
+    ) -> Result<Vec<String>> {
         let client = openai::Client::builder(api_key)
             .build()
             .context("Failed to create LLM client for fact extraction")?;
@@ -178,8 +184,8 @@ Return ONLY a JSON array of NEW facts, like:
         );
 
         let agent = client
-            .agent("gpt-4")
-            .preamble("You are an expert at extracting and formatting important personal information from conversations.")
+            .agent(memory_model_id)
+            .preamble(memory_preamble)
             .build();
 
         let response = agent
@@ -205,9 +211,13 @@ Return ONLY a JSON array of NEW facts, like:
         user_input: &str,
         source: String,
         api_key: &str,
+        memory_model_id: &str,
+        memory_preamble: &str,
     ) -> Result<Vec<String>> {
         // Use LLM-based extraction
-        let mut facts = self.extract_facts_llm(user_input, api_key).await?;
+        let mut facts = self
+            .extract_facts_llm(user_input, api_key, memory_model_id, memory_preamble)
+            .await?;
 
         // Filter out very short, vague, or generic facts
         facts.retain(|fact| {
@@ -321,7 +331,7 @@ Return ONLY a JSON array of NEW facts, like:
     }
 
     /// Consolidate memory entries using LLM-based similarity detection
-    pub async fn vacuum(&mut self, api_key: &str) -> Result<()> {
+    pub async fn vacuum(&mut self, api_key: &str, memory_similarity_model_id: &str) -> Result<()> {
         let original_count = self.journal.entries.len();
 
         if original_count <= 1 {
@@ -352,7 +362,12 @@ Return ONLY a JSON array of NEW facts, like:
             // Check against existing consolidated entries
             for existing in &consolidated {
                 if self
-                    .are_facts_similar_llm(&client, &entry.fact, &existing.fact)
+                    .are_facts_similar_llm(
+                        &client,
+                        &entry.fact,
+                        &existing.fact,
+                        memory_similarity_model_id,
+                    )
                     .await?
                 {
                     should_keep = false;
@@ -378,6 +393,7 @@ Return ONLY a JSON array of NEW facts, like:
         client: &openai::Client,
         fact1: &str,
         fact2: &str,
+        memory_similarity_model_id: &str,
     ) -> Result<bool> {
         let prompt = format!(
             r#"Compare these two memory facts and determine if they contain essentially the same information.
@@ -392,7 +408,7 @@ Are these facts essentially the same? Respond with only "YES" or "NO"."#,
         );
 
         let agent = client
-            .agent("gpt-3.5-turbo")
+            .agent(memory_similarity_model_id)
             .preamble("You are a helpful assistant that compares information for similarity.")
             .build();
 

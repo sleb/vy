@@ -14,15 +14,25 @@ pub struct Vy<M: CompletionModel> {
     conversation_history: Vec<Message>,
     model_id: String,
     api_key: String,
+    memory_model_id: String,
+    memory_preamble: String,
 }
 
 impl<M: CompletionModel> Vy<M> {
-    pub fn new(agent: Agent<M>, model_id: String, api_key: String) -> Self {
+    pub fn new(
+        agent: Agent<M>,
+        model_id: String,
+        api_key: String,
+        memory_model_id: String,
+        memory_preamble: String,
+    ) -> Self {
         Self {
             agent,
             conversation_history: Vec::new(),
             model_id,
             api_key,
+            memory_model_id,
+            memory_preamble,
         }
     }
 
@@ -240,6 +250,8 @@ impl<M: CompletionModel> Vy<M> {
                 &combined_conversation,
                 conversation_id.clone(),
                 &self.api_key,
+                &self.memory_model_id,
+                &self.memory_preamble,
             )
             .await
         {
