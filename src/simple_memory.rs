@@ -170,11 +170,27 @@ impl SimpleMemory {
             if let Some(pos) = input_lower.find(trigger) {
                 let start = pos + trigger.len();
                 if let Some(rest) = user_input.get(start..) {
-                    // Extract until end of sentence or reasonable stopping point
+                    // Extract until end of sentence, conjunction, or reasonable stopping point
                     let fact_part = rest
                         .split(&['.', '!', '?', '\n'])
                         .next()
                         .unwrap_or(rest)
+                        .trim();
+
+                    // Stop at conjunctions for better fact separation
+                    let fact_part = fact_part
+                        .split(" and ")
+                        .next()
+                        .unwrap_or(fact_part)
+                        .split(" but ")
+                        .next()
+                        .unwrap_or(fact_part)
+                        .split(" or ")
+                        .next()
+                        .unwrap_or(fact_part)
+                        .split(" so ")
+                        .next()
+                        .unwrap_or(fact_part)
                         .trim();
 
                     if !fact_part.is_empty() && fact_part.len() < 200 {
@@ -299,6 +315,7 @@ mod tests {
         let memory = SimpleMemory::new(PathBuf::from("test.json"));
 
         let facts = memory.extract_facts("Hi, my name is Alice and I work at Google.");
+
         assert_eq!(facts.len(), 2);
         assert!(facts.contains(&"User's name is Alice".to_string()));
         assert!(facts.contains(&"User works at Google".to_string()));
@@ -309,6 +326,7 @@ mod tests {
         let memory = SimpleMemory::new(PathBuf::from("test.json"));
 
         let facts = memory.extract_facts("I love pizza and I hate broccoli.");
+
         assert_eq!(facts.len(), 2);
         assert!(facts.contains(&"User loves pizza".to_string()));
         assert!(facts.contains(&"User hates broccoli".to_string()));

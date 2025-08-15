@@ -236,19 +236,31 @@ impl<S: MemoryStore, E: EmbeddingProvider> MemorySearchEngine<S, E> {
             }
         }
 
+        if matches == 0 {
+            return 0.0;
+        }
+
+        // Base score: percentage of query words matched
         let overlap_score = matches as f32 / query_words.len() as f32;
 
-        // Boost score for exact phrase matches
+        // Boost score for exact phrase matches (less boost for single words)
         let phrase_boost = if content_lower.contains(&query_lower) {
-            0.3
+            if query_words.len() == 1 { 0.1 } else { 0.3 }
         } else {
             0.0
         };
 
-        // Boost score for keyword density
-        let density_boost = (matches as f32 / content_words.len() as f32) * 0.2;
+        // Boost score for keyword density - more matches in shorter content scores higher
+        let density_boost = (matches as f32 / content_words.len() as f32) * 0.1;
 
-        (overlap_score + phrase_boost + density_boost).min(1.0)
+        // Multi-word query bonus - queries with multiple matching words should score significantly higher
+        let multi_word_bonus = if query_words.len() > 1 && matches > 1 {
+            (matches as f32 / query_words.len() as f32) * 0.3
+        } else {
+            0.0
+        };
+
+        overlap_score + phrase_boost + density_boost + multi_word_bonus
     }
 
     /// Rank search results based on multiple factors
