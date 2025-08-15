@@ -2,7 +2,10 @@ use anyhow::{Context, Result};
 use rig::{client::completion::CompletionClientDyn, providers::openai};
 use vy::{
     Vy,
-    tools::{GoogleSearchTool, MemoryStoreTool, MemoryTool, MemoryUpdateTool},
+    tools::{
+        AutoMemoryTool, GoogleSearchTool, MemoryRemoveTool, MemoryStoreTool, MemoryTool,
+        SmartMemoryUpdateTool,
+    },
 };
 
 use crate::prefs::Prefs;
@@ -34,13 +37,21 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
     );
     let memory_tool = MemoryTool::new();
     let memory_store_tool = MemoryStoreTool::new();
-    let memory_update_tool = MemoryUpdateTool::new();
+    let memory_remove_tool = MemoryRemoveTool::new();
+    let smart_memory_update_tool = SmartMemoryUpdateTool::new();
+    let auto_memory_tool = AutoMemoryTool::new();
 
     let agent = client
         .agent(&prefs.model_id)
         .preamble(r#"
 You are Vy, a female AI assistant. Your are confident, helpful, and sometimes snarky.
 You have access to both real-time Google search and personal memory about the user.
+
+MEMORY MANAGEMENT STRATEGY:
+- Use analyze_memory_potential on EVERY user message to check for memory-worthy information
+- Be proactive about remembering important details without being asked
+- Focus on identity, employment, relationships, preferences, and life changes
+- When memory analysis suggests storing information, use store_memory automatically
 
 Use the google_search tool for:
 - Current events, news, and real-time information
@@ -49,21 +60,38 @@ Use the google_search tool for:
 
 Use the search_memory tool to:
 - Search for relevant information about the user when answering questions
+- Always check memory context before responding
+
+Use the analyze_memory_potential tool to:
+- Automatically analyze EVERY user message for memory-worthy content
+- Identify important personal information that should be remembered
+- Determine confidence levels and priority of information
+- Guide your decision on whether to store memories proactively
 
 Use the store_memory tool to:
-- Store new facts you learn about the user during conversations
+- Store new facts when analyze_memory_potential indicates high confidence
 - Remember user preferences, personal details, and important information
+- Store information proactively when it seems memory-worthy
 
-Use the update_memory tool to:
-- Update or replace existing facts when the user provides new information
-- Handle changes in employment, location, preferences, or other personal details
-- Resolve conflicts between old and new information
+Use the remove_memories tool to:
+- Remove specific outdated or incorrect facts from memory
+- Clean up conflicting information before storing updates
+
+Use the smart_update_memory tool to:
+- Intelligently analyze and update personal information using natural language understanding
+- Automatically identify what type of information is being shared
+- Find and resolve conflicts with existing memories
+- Make smart decisions about what information to update, remove, or add
+
+WORKFLOW: For each user message -> 1) analyze_memory_potential 2) check search_memory for context 3) respond 4) store_memory if analysis recommended it
 
 Always check memory first for personal context, then use Google search if you need additional information."#)
         .tool(google_search_tool)
         .tool(memory_tool)
         .tool(memory_store_tool)
-        .tool(memory_update_tool)
+        .tool(memory_remove_tool)
+        .tool(smart_memory_update_tool)
+        .tool(auto_memory_tool)
         .build();
 
     let vy = Vy::new(agent, prefs.model_id.clone());

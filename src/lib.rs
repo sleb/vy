@@ -7,6 +7,9 @@ pub mod memory;
 pub mod simple_memory;
 pub mod tools;
 
+use simple_memory::{SimpleMemory, default_memory_file};
+use tools::auto_memory::AutoMemoryTool;
+
 pub struct Vy<M: CompletionModel> {
     agent: Agent<M>,
     conversation_history: Vec<Message>,
@@ -91,6 +94,9 @@ impl<M: CompletionModel> Vy<M> {
             println!(); // Add spacing between exchanges
         }
 
+        // Analyze conversation for memories before saying goodbye
+        self.analyze_conversation_memories().await?;
+
         self.print_goodbye();
         Ok(())
     }
@@ -168,6 +174,109 @@ impl<M: CompletionModel> Vy<M> {
             self.conversation_history.len()
         );
         println!("   (Alternating: You → Vy → You → Vy...)\n");
+    }
+
+    /// Analyze the entire conversation for memory-worthy information
+    async fn analyze_conversation_memories(&self) -> Result<()> {
+        if self.conversation_history.is_empty() {
+            return Ok(());
+        }
+
+        println!("🧠 Analyzing conversation for important information...");
+
+        // Get memory file path
+        let memory_file = match default_memory_file() {
+            Ok(path) => path,
+            Err(e) => {
+                eprintln!("❌ Failed to get memory file path: {e}");
+                return Ok(());
+            }
+        };
+
+        // Load existing memory
+        let mut memory = SimpleMemory::new(memory_file);
+        if let Err(e) = memory.load().await {
+            eprintln!("❌ Failed to load existing memories: {e}");
+            return Ok(());
+        }
+
+        // Collect all user messages from the conversation
+        let user_messages: Vec<String> = self
+            .conversation_history
+            .iter()
+            .filter_map(|msg| {
+                match msg {
+                    Message::User { content } => {
+                        // Extract text from OneOrMany content using debug format
+                        let debug_str = format!("{content:?}");
+                        // Parse the text content from the debug string
+                        // Format is typically: OneOrMany { first: Text(Text { text: "actual_text" }), rest: [] }
+                        if let Some(start) = debug_str.find("text: \"") {
+                            let start_idx = start + 7; // length of "text: \""
+                            if let Some(end) = debug_str[start_idx..].find("\" }") {
+                                let text = &debug_str[start_idx..start_idx + end];
+                                return Some(text.to_string());
+                            }
+                        }
+                        None
+                    }
+                    _ => None,
+                }
+            })
+            .collect();
+
+        // Combine all user messages into one analysis to avoid duplicates
+        if user_messages.is_empty() {
+            println!("  ✅ No user messages to analyze");
+            return Ok(());
+        }
+
+        let combined_conversation = user_messages.join(" ");
+        let conversation_id = format!(
+            "conversation_{}",
+            chrono::Utc::now().format("%Y%m%d_%H%M%S")
+        );
+
+        // Skip very short conversations or pure command conversations
+        if combined_conversation.len() < 10
+            || combined_conversation
+                .chars()
+                .all(|c| c.is_ascii_punctuation() || c.is_whitespace())
+        {
+            println!("  ✅ Conversation too short or contains no meaningful content");
+            return Ok(());
+        }
+
+        // Use the auto memory tool to analyze the combined conversation
+        if AutoMemoryTool::should_analyze_message(&combined_conversation) {
+            match memory
+                .learn_from_input(&combined_conversation, conversation_id.clone())
+                .await
+            {
+                Ok(facts) => {
+                    if !facts.is_empty() {
+                        println!(
+                            "  📝 Analyzed {} message(s) from this conversation",
+                            user_messages.len()
+                        );
+                        match facts.len() {
+                            1 => println!("  ✅ Stored 1 new memory"),
+                            n => println!("  ✅ Stored {n} new memories"),
+                        }
+                        println!("  💾 Memories saved for future conversations");
+                    } else {
+                        println!("  ✅ No new memorable information found");
+                    }
+                }
+                Err(e) => {
+                    eprintln!("⚠️  Failed to process conversation: {e}");
+                }
+            }
+        } else {
+            println!("  ✅ No memorable information detected in conversation");
+        }
+
+        Ok(())
     }
 
     fn print_goodbye(&self) {

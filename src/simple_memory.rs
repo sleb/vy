@@ -267,6 +267,7 @@ impl SimpleMemory {
     }
 
     /// Remove entries matching a predicate
+    #[allow(dead_code)]
     pub async fn remove_entries<F>(&mut self, predicate: F) -> Result<Vec<MemoryEntry>>
     where
         F: Fn(&MemoryEntry) -> bool,
@@ -287,17 +288,20 @@ impl SimpleMemory {
     }
 
     /// Get all entries (for updating operations)
+    #[allow(dead_code)]
     pub fn get_all_entries(&self) -> &Vec<MemoryEntry> {
         &self.journal.entries
     }
 
     /// Add a raw memory entry directly
+    #[allow(dead_code)]
     pub async fn add_entry(&mut self, entry: MemoryEntry) -> Result<()> {
         self.journal.entries.push(entry);
         self.save().await
     }
 
     /// Add a raw memory entry with fact and source (for testing)
+    #[allow(dead_code)]
     pub fn add_entry_direct(&mut self, fact: String, source: String) {
         self.journal.add_entry(fact, source);
     }
