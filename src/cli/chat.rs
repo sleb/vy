@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use rig::{client::completion::CompletionClientDyn, providers::openai};
 use vy::{
     Vy,
-    tools::{GoogleSearchTool, MemoryStoreTool, MemoryTool},
+    tools::{GoogleSearchTool, MemoryStoreTool, MemoryTool, MemoryUpdateTool},
 };
 
 use crate::prefs::Prefs;
@@ -34,6 +34,7 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
     );
     let memory_tool = MemoryTool::new();
     let memory_store_tool = MemoryStoreTool::new();
+    let memory_update_tool = MemoryUpdateTool::new();
 
     let agent = client
         .agent(&prefs.model_id)
@@ -53,10 +54,16 @@ Use the store_memory tool to:
 - Store new facts you learn about the user during conversations
 - Remember user preferences, personal details, and important information
 
+Use the update_memory tool to:
+- Update or replace existing facts when the user provides new information
+- Handle changes in employment, location, preferences, or other personal details
+- Resolve conflicts between old and new information
+
 Always check memory first for personal context, then use Google search if you need additional information."#)
         .tool(google_search_tool)
         .tool(memory_tool)
         .tool(memory_store_tool)
+        .tool(memory_update_tool)
         .build();
 
     let vy = Vy::new(agent, prefs.model_id.clone());

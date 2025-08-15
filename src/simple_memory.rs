@@ -265,6 +265,42 @@ impl SimpleMemory {
         self.journal = MemoryJournal::new();
         self.save().await
     }
+
+    /// Remove entries matching a predicate
+    pub async fn remove_entries<F>(&mut self, predicate: F) -> Result<Vec<MemoryEntry>>
+    where
+        F: Fn(&MemoryEntry) -> bool,
+    {
+        let mut removed_entries = Vec::new();
+        let mut i = 0;
+        while i < self.journal.entries.len() {
+            if predicate(&self.journal.entries[i]) {
+                removed_entries.push(self.journal.entries.remove(i));
+            } else {
+                i += 1;
+            }
+        }
+        if !removed_entries.is_empty() {
+            self.save().await?;
+        }
+        Ok(removed_entries)
+    }
+
+    /// Get all entries (for updating operations)
+    pub fn get_all_entries(&self) -> &Vec<MemoryEntry> {
+        &self.journal.entries
+    }
+
+    /// Add a raw memory entry directly
+    pub async fn add_entry(&mut self, entry: MemoryEntry) -> Result<()> {
+        self.journal.entries.push(entry);
+        self.save().await
+    }
+
+    /// Add a raw memory entry with fact and source (for testing)
+    pub fn add_entry_direct(&mut self, fact: String, source: String) {
+        self.journal.add_entry(fact, source);
+    }
 }
 
 #[derive(Debug)]
