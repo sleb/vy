@@ -51,16 +51,8 @@ impl<M: CompletionModel> Vy<M> {
                 continue;
             }
 
-            // Show thinking indicator with conversation context
-            let msg_count = self.conversation_history.len();
-            print!(
-                "🤖 Vy ({}): ",
-                if msg_count > 0 {
-                    format!("{msg_count} msgs")
-                } else {
-                    "new chat".to_string()
-                }
-            );
+            // Show thinking indicator
+            print!("🤖 Vy: ");
             io::stdout().flush()?;
 
             // Add user message to history
@@ -102,20 +94,10 @@ impl<M: CompletionModel> Vy<M> {
     }
 
     fn print_welcome(&self) {
-        println!("┌─────────────────────────────────────────────────────────────────┐");
-        println!("│  🤖 Welcome to Vy - Your AI Assistant                           │");
-        println!("│  Model: {:<52} │", self.model_id);
-        println!("│                                                                 │");
+        println!("🤖 Vy - {} | Type 'help' for commands", self.model_id);
         if self.model_id == "gpt-5-mini" {
-            println!("│  ⚠️  Note: Google search is disabled for gpt-5-mini compatibility │");
-            println!("│                                                                 │");
+            println!("⚠️  Note: Google search is disabled for gpt-5-mini compatibility");
         }
-        println!("│  Commands:                                                      │");
-        println!("│    • 'exit', 'quit', 'bye', 'q' - End conversation              │");
-        println!("│    • 'help' - Show available commands                           │");
-        println!("│    • 'history' - Show conversation history                      │");
-        println!("│    • 'clear' - Clear conversation history                       │");
-        println!("└─────────────────────────────────────────────────────────────────┘");
         println!();
     }
 
@@ -154,41 +136,45 @@ impl<M: CompletionModel> Vy<M> {
     }
 
     fn print_help(&self) {
-        println!("📚 Available Commands:");
-        println!("  • exit, quit, bye, q  - End the conversation");
-        println!("  • help                - Show this help message");
-        println!("  • history             - Show conversation history");
-        println!("  • clear               - Clear the screen and start fresh");
-        println!("  • Just type naturally to chat with Vy!");
+        println!("📚 Vy Commands:");
+        println!("  exit, quit, bye, q    End the conversation");
+        println!("  help                  Show this help message");
+        println!("  history              Show conversation history");
+        println!("  clear                Clear the screen and start fresh");
+        println!();
+        println!("💬 Just type naturally to chat with Vy!");
+        println!("🧠 Your conversations are automatically remembered for context");
+        println!("🔍 Vy has access to real-time Google search and personal memory");
         println!();
     }
 
     fn print_history(&self) {
         if self.conversation_history.is_empty() {
-            println!("📝 No conversation history yet.\n");
-            return;
+            println!("📝 No conversation history yet.");
+        } else {
+            println!(
+                "📝 Conversation History: {} messages stored",
+                self.conversation_history.len()
+            );
+            println!("   (Messages are kept for context during this session)");
         }
-
-        println!(
-            "📝 Conversation History: {} messages stored",
-            self.conversation_history.len()
-        );
-        println!("   (Alternating: You → Vy → You → Vy...)\n");
+        println!();
     }
 
     /// Analyze the entire conversation for memory-worthy information
     async fn analyze_conversation_memories(&self) -> Result<()> {
         if self.conversation_history.is_empty() {
+            log::debug!("No conversation history to analyze");
             return Ok(());
         }
 
-        println!("🧠 Analyzing conversation for important information...");
+        log::debug!("Analyzing conversation for important information...");
 
         // Get memory file path
         let memory_file = match default_memory_file() {
             Ok(path) => path,
             Err(e) => {
-                eprintln!("❌ Failed to get memory file path: {e}");
+                log::debug!("Failed to get memory file path: {e}");
                 return Ok(());
             }
         };
@@ -196,7 +182,7 @@ impl<M: CompletionModel> Vy<M> {
         // Load existing memory
         let mut memory = SimpleMemory::new(memory_file);
         if let Err(e) = memory.load().await {
-            eprintln!("❌ Failed to load existing memories: {e}");
+            log::debug!("Failed to load existing memories: {e}");
             return Ok(());
         }
 
@@ -227,7 +213,7 @@ impl<M: CompletionModel> Vy<M> {
 
         // Combine all user messages into one analysis to avoid duplicates
         if user_messages.is_empty() {
-            println!("  ✅ No user messages to analyze");
+            log::debug!("No user messages to analyze");
             return Ok(());
         }
 
@@ -243,7 +229,7 @@ impl<M: CompletionModel> Vy<M> {
                 .chars()
                 .all(|c| c.is_ascii_punctuation() || c.is_whitespace())
         {
-            println!("  ✅ Conversation too short or contains no meaningful content");
+            log::debug!("Conversation too short or contains no meaningful content");
             return Ok(());
         }
 
@@ -255,35 +241,28 @@ impl<M: CompletionModel> Vy<M> {
             {
                 Ok(facts) => {
                     if !facts.is_empty() {
-                        println!(
-                            "  📝 Analyzed {} message(s) from this conversation",
-                            user_messages.len()
+                        log::debug!(
+                            "Analyzed {} message(s) from this conversation, stored {} memories",
+                            user_messages.len(),
+                            facts.len()
                         );
-                        match facts.len() {
-                            1 => println!("  ✅ Stored 1 new memory"),
-                            n => println!("  ✅ Stored {n} new memories"),
-                        }
-                        println!("  💾 Memories saved for future conversations");
                     } else {
-                        println!("  ✅ No new memorable information found");
+                        log::debug!("No new memorable information found");
                     }
                 }
                 Err(e) => {
-                    eprintln!("⚠️  Failed to process conversation: {e}");
+                    log::debug!("Failed to process conversation: {e}");
                 }
             }
         } else {
-            println!("  ✅ No memorable information detected in conversation");
+            log::debug!("No memorable information detected in conversation");
         }
 
         Ok(())
     }
 
     fn print_goodbye(&self) {
-        println!("┌─────────────────────────────────────────────────────────────────┐");
-        println!("│  👋 Goodbye! Feel free to chat anytime.                         │");
-        println!("│  Have a great day! 🌟                                           │");
-        println!("└─────────────────────────────────────────────────────────────────┘");
+        println!("👋 Goodbye! Have a great day! 🌟");
     }
 
     fn format_error(e: &dyn std::error::Error) -> String {
