@@ -78,11 +78,11 @@ impl Cli {
                 if *edit {
                     self.run_config_edit(prefs_path).await
                 } else if let Some(action) = action {
-                    config::run_config(action, prefs_path, |path| self.load_prefs_from_path(path))
+                    config::run_config(action, prefs_path, |path| self.load_prefs_strict(path))
                 } else {
                     // Default to list when no action is specified
                     config::run_config(&config::ConfigAction::List, prefs_path, |path| {
-                        self.load_prefs_from_path(path)
+                        self.load_prefs_strict(path)
                     })
                 }
             }
@@ -105,7 +105,7 @@ impl Cli {
             .as_deref()
             .or(default_prefs_path())
             .context("Please specify a prefs path via --prefs-path")?;
-        self.load_prefs_from_path(prefs_path)
+        prefs::load_or_create_prefs(prefs_path)
     }
 
     fn load_prefs_from_path(&self, prefs_path: &Path) -> Result<Prefs> {
@@ -113,6 +113,21 @@ impl Cli {
 
         let prefs = prefs::load_prefs(prefs_path)
             .with_context(|| format!("Failed to load prefs from path: {}", prefs_path.display()))?;
+        debug!("prefs: {prefs:?}");
+
+        Ok(prefs)
+    }
+
+    fn load_prefs_strict(&self, prefs_path: &Path) -> Result<Prefs> {
+        debug!("prefs_path: {prefs_path:?}");
+
+        let prefs = prefs::load_prefs(prefs_path)
+            .with_context(|| {
+                format!(
+                    "Failed to load configuration. Make sure the config file exists or use 'vy config init' to create it.\nExpected location: {}",
+                    prefs_path.display()
+                )
+            })?;
         debug!("prefs: {prefs:?}");
 
         Ok(prefs)

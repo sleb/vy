@@ -109,6 +109,39 @@ pub fn load_prefs(path: &Path) -> Result<Prefs> {
     Ok(prefs)
 }
 
+pub fn load_or_create_prefs(path: &Path) -> Result<Prefs> {
+    match load_prefs(path) {
+        Ok(prefs) => Ok(prefs),
+        Err(_) => {
+            // Create default prefs if file doesn't exist
+            let default_prefs = Prefs {
+                llm_api_key: String::new(),
+                google_api_key: String::new(),
+                google_search_engine_id: String::new(),
+                model_id: default_model_id(),
+                preamble: default_preamble(),
+                memory_model_id: default_memory_model_id(),
+                memory_similarity_model_id: default_memory_similarity_model_id(),
+                memory_preamble: default_memory_preamble(),
+            };
+
+            // Try to save the defaults
+            if let Err(e) = save_prefs(&default_prefs, path) {
+                eprintln!("⚠️  Could not create default config file: {}", e);
+                eprintln!("💡 Run 'vy config init' to initialize configuration");
+            } else {
+                println!(
+                    "✅ Created default configuration file at: {}",
+                    path.display()
+                );
+                println!("💡 Set your API key with: vy config set llm_api_key");
+            }
+
+            Ok(default_prefs)
+        }
+    }
+}
+
 pub fn save_prefs(prefs: &Prefs, path: &Path) -> Result<()> {
     if let Some(parent_dir) = path.parent() {
         fs::create_dir_all(parent_dir).with_context(|| {

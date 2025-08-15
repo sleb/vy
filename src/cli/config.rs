@@ -100,6 +100,8 @@ pub enum ConfigAction {
     },
     /// List all configuration values
     List,
+    /// Initialize configuration file with default values
+    Init,
 }
 
 fn validate_model_id(model_id: &str) -> Result<(), String> {
@@ -145,7 +147,7 @@ pub fn run_config(
 ) -> Result<()> {
     match action {
         ConfigAction::Get { key } => {
-            let prefs = load_prefs_fn(prefs_path).context("Failed to load configuration. Make sure the config file exists or use 'config set' to create it.")?;
+            let prefs = load_prefs_fn(prefs_path).context("Failed to load configuration. Make sure the config file exists or use 'vy config init' to create it.")?;
 
             let config_key = ConfigKey::from_str(key).unwrap_or_else(|| {
                 eprintln!("Unknown configuration key: {key}");
@@ -236,7 +238,7 @@ pub fn run_config(
             println!("Configuration saved to: {}", prefs_path.display());
         }
         ConfigAction::List => {
-            let prefs = load_prefs_fn(prefs_path).context("Failed to load configuration. Make sure the config file exists or use 'config set' to create it.")?;
+            let prefs = load_prefs_fn(prefs_path).context("Failed to load configuration. Make sure the config file exists or use 'vy config init' to create it.")?;
             println!("Configuration file: {}", prefs_path.display());
             println!("Available settings:");
 
@@ -251,6 +253,47 @@ pub fn run_config(
                 };
                 println!("  {}: {}", config_key.as_str(), display_value);
             }
+        }
+        ConfigAction::Init => {
+            if prefs_path.exists() {
+                println!(
+                    "⚠️  Configuration file already exists at: {}",
+                    prefs_path.display()
+                );
+                print!("Overwrite existing configuration? (y/N): ");
+                std::io::stdout()
+                    .flush()
+                    .context("Failed to flush stdout")?;
+                let mut input = String::new();
+                std::io::stdin()
+                    .read_line(&mut input)
+                    .context("Failed to read input")?;
+                if !input.trim().to_lowercase().starts_with('y') {
+                    println!("Configuration initialization cancelled.");
+                    return Ok(());
+                }
+            }
+
+            let default_prefs = Prefs {
+                llm_api_key: String::new(),
+                google_api_key: String::new(),
+                google_search_engine_id: String::new(),
+                model_id: "gpt-3.5-turbo".to_string(),
+                preamble: crate::prefs::default_preamble(),
+                memory_model_id: "gpt-4".to_string(),
+                memory_similarity_model_id: "gpt-3.5-turbo".to_string(),
+                memory_preamble: crate::prefs::default_memory_preamble(),
+            };
+
+            prefs::save_prefs(&default_prefs, prefs_path)?;
+            println!(
+                "✅ Configuration file initialized at: {}",
+                prefs_path.display()
+            );
+            println!("💡 Next steps:");
+            println!("   1. Set your API key: vy config set llm_api_key");
+            println!("   2. Optionally configure Google search: vy config set google_api_key");
+            println!("   3. Start chatting: vy chat");
         }
     }
 
