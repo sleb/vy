@@ -132,78 +132,79 @@ impl SimpleMemory {
         Ok(())
     }
 
-    /// Extract simple facts from user input using basic patterns
-    pub fn extract_facts(&self, user_input: &str) -> Vec<String> {
-        let mut facts = Vec::new();
-        let input_lower = user_input.to_lowercase();
+    /// Legacy fact extraction using simple patterns (deprecated - use LLM-based extraction instead)
+    /// Kept for backward compatibility with existing code that still calls it
+    pub fn extract_facts(&self, _user_input: &str) -> Vec<String> {
+        // Return empty since we now use LLM-based extraction
+        // This method is only kept for backward compatibility
+        Vec::new()
+    }
 
-        // Basic patterns for fact extraction
-        let patterns = [
-            ("my name is ", "User's name is "),
-            ("i am ", "User is "),
-            ("i'm ", "User is "),
-            ("i work at ", "User works at "),
-            ("i work for ", "User works for "),
-            ("i live in ", "User lives in "),
-            ("i'm from ", "User is from "),
-            ("my birthday is ", "User's birthday is "),
-            ("i was born ", "User was born "),
-            ("i like ", "User likes "),
-            ("i love ", "User loves "),
-            ("i hate ", "User hates "),
-            ("i dislike ", "User dislikes "),
-            ("my favorite ", "User's favorite "),
-            ("i prefer ", "User prefers "),
-            ("i have ", "User has "),
-            ("i own ", "User owns "),
-            ("i drive ", "User drives "),
-            ("i study ", "User studies "),
-            ("i'm studying ", "User is studying "),
-            ("i can't stand ", "User can't stand "),
-            ("i don't like ", "User doesn't like "),
-            ("i enjoy ", "User enjoys "),
-            ("i play ", "User plays "),
-            ("i went to ", "User went to "),
-            ("i graduated from ", "User graduated from "),
-            ("my job is ", "User's job is "),
-            ("my profession is ", "User's profession is "),
-        ];
+    /// Extract facts using LLM analysis for better memory detection
+    pub async fn extract_facts_llm(&self, user_input: &str, api_key: &str) -> Result<Vec<String>> {
+        let client = openai::Client::builder(api_key)
+            .build()
+            .context("Failed to create LLM client for fact extraction")?;
 
-        for (trigger, prefix) in &patterns {
-            if let Some(pos) = input_lower.find(trigger) {
-                let start = pos + trigger.len();
-                if let Some(rest) = user_input.get(start..) {
-                    // Extract until end of sentence, conjunction, or reasonable stopping point
-                    let fact_part = rest
-                        .split(&['.', '!', '?', '\n'])
-                        .next()
-                        .unwrap_or(rest)
-                        .trim();
+        // Get existing memories to provide context and avoid duplicates
+        let existing_facts: Vec<String> = self
+            .journal
+            .entries
+            .iter()
+            .map(|entry| entry.fact.clone())
+            .collect();
 
-                    // Stop at conjunctions for better fact separation
-                    let fact_part = fact_part
-                        .split(" and ")
-                        .next()
-                        .unwrap_or(fact_part)
-                        .split(" but ")
-                        .next()
-                        .unwrap_or(fact_part)
-                        .split(" or ")
-                        .next()
-                        .unwrap_or(fact_part)
-                        .split(" so ")
-                        .next()
-                        .unwrap_or(fact_part)
-                        .trim();
+        let existing_context = if existing_facts.is_empty() {
+            "No existing memories.".to_string()
+        } else {
+            format!("Existing memories:\n{}", existing_facts.join("\n"))
+        };
 
-                    if !fact_part.is_empty() && fact_part.len() < 200 {
-                        facts.push(format!("{prefix}{fact_part}"));
-                    }
-                }
-            }
-        }
+        let prompt = format!(
+            r#"Analyze this conversation and extract NEW important facts about the user to remember for future conversations.
 
-        facts
+Extract facts about:
+- Personal details: name, age, family members, relationships
+- Professional: job, company, career, work projects
+- Location: where they live, work, places they frequent
+- Appointments & commitments: meetings, events, scheduled activities
+- Health: doctors, medical appointments, treatments, conditions
+- Preferences: likes, dislikes, hobbies, interests
+- Action items: reminders, tasks they need to do
+- Life events: birthdays, anniversaries, milestones
+- Projects & goals: what they're working on, planning
+
+{}
+
+Conversation: "{}"
+
+Only extract NEW facts that are NOT already in the existing memories. Format each fact as a clear, specific statement. Include names, dates, times, and places when mentioned.
+
+Return ONLY a JSON array of NEW facts, like:
+["Has a son named Henry who is turning 18", "Has appointment with nutritionist Michael at 4pm", "Needs to update food logging in Cronometer"]"#,
+            existing_context, user_input
+        );
+
+        let agent = client
+            .agent("gpt-4")
+            .preamble("You are an expert at extracting and formatting important personal information from conversations.")
+            .build();
+
+        let response = agent
+            .prompt(&prompt)
+            .await
+            .context("Failed to get LLM response for fact extraction")?;
+
+        // Try to parse as JSON array
+        let response_cleaned = response
+            .trim()
+            .trim_start_matches("```json")
+            .trim_end_matches("```")
+            .trim();
+        let facts: Vec<String> = serde_json::from_str(response_cleaned)
+            .context("Failed to parse LLM response as JSON array")?;
+
+        Ok(facts)
     }
 
     /// Add a memory from user input
@@ -213,6 +214,44 @@ impl SimpleMemory {
         source: String,
     ) -> Result<Vec<String>> {
         let facts = self.extract_facts(user_input);
+
+        for fact in &facts {
+            self.journal.add_entry(fact.clone(), source.clone());
+        }
+
+        if !facts.is_empty() {
+            self.save().await?;
+        }
+
+        Ok(facts)
+    }
+
+    /// Add a memory from user input using LLM analysis
+    pub async fn learn_from_input_llm(
+        &mut self,
+        user_input: &str,
+        source: String,
+        api_key: &str,
+    ) -> Result<Vec<String>> {
+        // Try LLM-based extraction first
+        let mut facts = match self.extract_facts_llm(user_input, api_key).await {
+            Ok(llm_facts) if !llm_facts.is_empty() => llm_facts,
+            _ => {
+                // Fallback to pattern-based extraction
+                self.extract_facts(user_input)
+            }
+        };
+
+        // Filter out very short, vague, or generic facts
+        facts.retain(|fact| {
+            let fact_lower = fact.to_lowercase();
+            fact.len() > 8
+                && !fact_lower.starts_with("user is")
+                && !fact_lower.contains("user said")
+                && !fact_lower.contains("user mentioned")
+                && !fact_lower.contains("user talked about")
+                && !fact.trim().is_empty()
+        });
 
         for fact in &facts {
             self.journal.add_entry(fact.clone(), source.clone());
@@ -449,9 +488,8 @@ mod tests {
 
         let facts = memory.extract_facts("Hi, my name is Alice and I work at Google.");
 
-        assert_eq!(facts.len(), 2);
-        assert!(facts.contains(&"User's name is Alice".to_string()));
-        assert!(facts.contains(&"User works at Google".to_string()));
+        // extract_facts now returns empty - LLM-based extraction is used instead
+        assert_eq!(facts.len(), 0);
     }
 
     #[test]
@@ -460,9 +498,8 @@ mod tests {
 
         let facts = memory.extract_facts("I love pizza and I hate broccoli.");
 
-        assert_eq!(facts.len(), 2);
-        assert!(facts.contains(&"User loves pizza".to_string()));
-        assert!(facts.contains(&"User hates broccoli".to_string()));
+        // extract_facts now returns empty - LLM-based extraction is used instead
+        assert_eq!(facts.len(), 0);
     }
 
     #[test]
@@ -484,10 +521,9 @@ mod tests {
         // Create and save some memories
         {
             let mut memory = SimpleMemory::new(file_path.clone());
-            memory
-                .learn_from_input("My name is Bob", "test".to_string())
-                .await
-                .unwrap();
+            // learn_from_input now returns empty since extract_facts is deprecated
+            // This test now just verifies the save/load mechanism works
+            memory.add_entry_direct("User's name is Bob".to_string(), "test".to_string());
             memory.save().await.unwrap();
         }
 

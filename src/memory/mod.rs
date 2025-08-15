@@ -190,56 +190,15 @@ impl<S: MemoryStore, E: EmbeddingProvider> MemoryManager<S, E> {
         Ok(memories)
     }
 
-    async fn extract_user_preference(&self, input: &str) -> Result<Option<Memory>> {
-        // Simple heuristic - look for preference indicators
-        let preference_indicators = [
-            "i like",
-            "i love",
-            "i hate",
-            "i dislike",
-            "i prefer",
-            "my favorite",
-            "i enjoy",
-            "i can't stand",
-        ];
-
-        let input_lower = input.to_lowercase();
-        for indicator in &preference_indicators {
-            if input_lower.contains(indicator) {
-                return Ok(Some(Memory::new(
-                    MemoryType::Opinion,
-                    input.to_string(),
-                    vec!["user".to_string()],
-                )));
-            }
-        }
-
+    async fn extract_user_preference(&self, _input: &str) -> Result<Option<Memory>> {
+        // Removed brittle keyword matching - this method now returns None
+        // Preference extraction should be handled by LLM-based analysis instead
         Ok(None)
     }
 
-    async fn extract_factual_information(&self, input: &str) -> Result<Option<Memory>> {
-        // Simple heuristic - look for factual statements
-        let fact_indicators = [
-            "my name is",
-            "i am",
-            "i work at",
-            "i live in",
-            "i was born",
-            "i have",
-            "my birthday",
-        ];
-
-        let input_lower = input.to_lowercase();
-        for indicator in &fact_indicators {
-            if input_lower.contains(indicator) {
-                return Ok(Some(Memory::new(
-                    MemoryType::Personal,
-                    input.to_string(),
-                    vec!["user".to_string()],
-                )));
-            }
-        }
-
+    async fn extract_factual_information(&self, _input: &str) -> Result<Option<Memory>> {
+        // Removed brittle keyword matching - this method now returns None
+        // Factual information extraction should be handled by LLM-based analysis instead
         Ok(None)
     }
 

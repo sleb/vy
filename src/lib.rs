@@ -8,20 +8,21 @@ pub mod simple_memory;
 pub mod tools;
 
 use simple_memory::{SimpleMemory, default_memory_file};
-use tools::auto_memory::AutoMemoryTool;
 
 pub struct Vy<M: CompletionModel> {
     agent: Agent<M>,
     conversation_history: Vec<Message>,
     model_id: String,
+    api_key: String,
 }
 
 impl<M: CompletionModel> Vy<M> {
-    pub fn new(agent: Agent<M>, model_id: String) -> Self {
+    pub fn new(agent: Agent<M>, model_id: String, api_key: String) -> Self {
         Self {
             agent,
             conversation_history: Vec::new(),
             model_id,
+            api_key,
         }
     }
 
@@ -233,29 +234,29 @@ impl<M: CompletionModel> Vy<M> {
             return Ok(());
         }
 
-        // Use the auto memory tool to analyze the combined conversation
-        if AutoMemoryTool::should_analyze_message(&combined_conversation) {
-            match memory
-                .learn_from_input(&combined_conversation, conversation_id.clone())
-                .await
-            {
-                Ok(facts) => {
-                    if !facts.is_empty() {
-                        log::debug!(
-                            "Analyzed {} message(s) from this conversation, stored {} memories",
-                            user_messages.len(),
-                            facts.len()
-                        );
-                    } else {
-                        log::debug!("No new memorable information found");
-                    }
-                }
-                Err(e) => {
-                    log::debug!("Failed to process conversation: {e}");
+        // Use LLM-based memory analysis for better fact extraction
+        match memory
+            .learn_from_input_llm(
+                &combined_conversation,
+                conversation_id.clone(),
+                &self.api_key,
+            )
+            .await
+        {
+            Ok(facts) => {
+                if !facts.is_empty() {
+                    log::debug!(
+                        "Analyzed {} message(s) from this conversation, stored {} memories",
+                        user_messages.len(),
+                        facts.len()
+                    );
+                } else {
+                    log::debug!("No new memorable information found");
                 }
             }
-        } else {
-            log::debug!("No memorable information detected in conversation");
+            Err(e) => {
+                log::debug!("Failed to process conversation: {e}");
+            }
         }
 
         Ok(())

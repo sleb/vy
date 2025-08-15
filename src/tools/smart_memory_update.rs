@@ -114,57 +114,13 @@ impl SmartMemoryUpdateTool {
     }
 
     fn extract_search_terms(text: &str) -> Vec<String> {
-        let text_lower = text.to_lowercase();
         let mut terms = Vec::new();
 
-        // Employment-related terms
-        let employment_indicators = [
-            "work",
-            "job",
-            "employ",
-            "manager",
-            "engineer",
-            "developer",
-            "director",
-            "senior",
-            "sr",
-            "lead",
-            "architect",
-            "consultant",
-            "microsoft",
-            "google",
-            "amazon",
-            "apple",
-            "meta",
-            "tesla",
-        ];
-
-        // Personal info terms
-        let personal_indicators = [
-            "name", "live", "from", "birthday", "age", "family", "married", "single", "wife",
-            "husband", "children", "kids",
-        ];
-
-        // Preference terms
-        let preference_indicators = [
-            "like", "love", "hate", "prefer", "favorite", "enjoy", "coffee", "tea", "pizza",
-            "music", "movie", "book",
-        ];
-
-        for indicator in employment_indicators
-            .iter()
-            .chain(personal_indicators.iter())
-            .chain(preference_indicators.iter())
-        {
-            if text_lower.contains(indicator) {
-                terms.push(indicator.to_string());
-            }
-        }
-
-        // Extract potential company names and proper nouns
+        // Extract all meaningful words (longer than 2 characters)
+        // Remove brittle keyword matching - just extract actual words from the text
         for word in text.split_whitespace() {
             let cleaned = word.trim_matches(|c: char| !c.is_alphanumeric());
-            if cleaned.len() > 2 && cleaned.chars().next().unwrap_or('a').is_uppercase() {
+            if cleaned.len() > 2 {
                 terms.push(cleaned.to_lowercase());
             }
         }
