@@ -6,6 +6,9 @@
 
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
+use rig::client::completion::CompletionClientDyn;
+use rig::completion::Prompt;
+use rig::providers::openai;
 use serde::{Deserialize, Serialize};
 
 use std::path::PathBuf;
@@ -304,6 +307,96 @@ impl SimpleMemory {
     #[allow(dead_code)]
     pub fn add_entry_direct(&mut self, fact: String, source: String) {
         self.journal.add_entry(fact, source);
+    }
+
+    /// Get the number of memory entries
+    pub fn entry_count(&self) -> usize {
+        self.journal.entries.len()
+    }
+
+    /// Consolidate memory entries using LLM-based similarity detection
+    pub async fn vacuum(&mut self, api_key: &str) -> Result<()> {
+        let original_count = self.journal.entries.len();
+
+        if original_count <= 1 {
+            return Ok(());
+        }
+
+        // Step 1: Remove exact duplicates
+        let mut unique_facts = std::collections::HashSet::new();
+        let mut deduplicated = Vec::new();
+
+        for entry in &self.journal.entries {
+            let fact_normalized = entry.fact.trim().to_lowercase();
+            if unique_facts.insert(fact_normalized) {
+                deduplicated.push(entry.clone());
+            }
+        }
+
+        // Step 2: Use LLM for intelligent similarity detection
+        let client = openai::Client::builder(api_key)
+            .build()
+            .context("Failed to create LLM client for vacuum operation")?;
+
+        let mut consolidated: Vec<MemoryEntry> = Vec::new();
+
+        for entry in deduplicated {
+            let mut should_keep = true;
+
+            // Check against existing consolidated entries
+            for existing in &consolidated {
+                if self
+                    .are_facts_similar_llm(&client, &entry.fact, &existing.fact)
+                    .await?
+                {
+                    should_keep = false;
+                    break;
+                }
+            }
+
+            if should_keep {
+                consolidated.push(entry);
+            }
+        }
+
+        // Step 3: Sort by timestamp (newest first) to keep most recent information
+        consolidated.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+
+        self.journal.entries = consolidated;
+        Ok(())
+    }
+
+    /// LLM-based similarity check for facts
+    async fn are_facts_similar_llm(
+        &self,
+        client: &openai::Client,
+        fact1: &str,
+        fact2: &str,
+    ) -> Result<bool> {
+        let prompt = format!(
+            r#"Compare these two memory facts and determine if they contain essentially the same information.
+Consider them similar if they refer to the same person, place, or concept with equivalent meaning,
+even if worded differently.
+
+Fact 1: "{}"
+Fact 2: "{}"
+
+Are these facts essentially the same? Respond with only "YES" or "NO"."#,
+            fact1, fact2
+        );
+
+        let agent = client
+            .agent("gpt-3.5-turbo")
+            .preamble("You are a helpful assistant that compares information for similarity.")
+            .build();
+
+        let response = agent
+            .prompt(&prompt)
+            .await
+            .context("Failed to get LLM response for similarity check")?;
+
+        let answer = response.trim().to_uppercase();
+        Ok(answer == "YES")
     }
 }
 

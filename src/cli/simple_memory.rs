@@ -41,6 +41,12 @@ pub enum SimpleMemoryCommand {
         /// Text to extract facts from
         text: String,
     },
+    /// Consolidate and optimize memory entries by removing duplicates and combining related information
+    Vacuum {
+        /// Skip confirmation prompt
+        #[clap(long)]
+        yes: bool,
+    },
 }
 
 impl SimpleMemoryCommand {
@@ -135,6 +141,72 @@ impl SimpleMemoryCommand {
                     for (i, fact) in facts.iter().enumerate() {
                         println!("{}. {}", i + 1, fact);
                     }
+                }
+            }
+            SimpleMemoryCommand::Vacuum { yes } => {
+                let entries_before = memory.entry_count();
+
+                if !yes {
+                    print!(
+                        "⚠️  This will consolidate {} memory entries. Continue? [y/N]: ",
+                        entries_before
+                    );
+                    std::io::stdout().flush()?;
+
+                    let mut input = String::new();
+                    std::io::stdin().read_line(&mut input)?;
+                    let input = input.trim().to_lowercase();
+
+                    if input != "y" && input != "yes" {
+                        println!("❌ Vacuum cancelled.");
+                        return Ok(());
+                    }
+                }
+
+                // Try to load API key from environment or config
+                let api_key = std::env::var("OPENAI_API_KEY").or_else(|_| {
+                    // Try to load from config file
+                    if let Some(proj_dirs) = directories::ProjectDirs::from("vy", "", "") {
+                        let config_path = proj_dirs.config_dir().join("prefs.toml");
+                        match crate::prefs::load_prefs(&config_path) {
+                            Ok(prefs) => Ok(prefs.llm_api_key),
+                            Err(_) => Err("No API key found".to_string()),
+                        }
+                    } else {
+                        Err("No config directory".to_string())
+                    }
+                });
+
+                match api_key {
+                    Ok(key) if !key.is_empty() => {
+                        println!(
+                            "🧹 Consolidating {} memory entries with LLM analysis...",
+                            entries_before
+                        );
+                        memory.vacuum(&key).await?;
+                    }
+                    _ => {
+                        eprintln!("❌ Error: No API key found for LLM analysis.");
+                        eprintln!("💡 Please set your API key:");
+                        eprintln!("   • Environment variable: export OPENAI_API_KEY=your_key");
+                        eprintln!("   • Or configure it: vy config set llm_api_key");
+                        return Ok(());
+                    }
+                }
+
+                memory.save().await?;
+
+                let entries_after = memory.entry_count();
+                let removed = entries_before - entries_after;
+
+                if removed > 0 {
+                    println!(
+                        "✅ Vacuum completed! Removed {} redundant entries.",
+                        removed
+                    );
+                    println!("📊 Memory entries: {} → {}", entries_before, entries_after);
+                } else {
+                    println!("✅ Vacuum completed! No redundant entries found.");
                 }
             }
         }
