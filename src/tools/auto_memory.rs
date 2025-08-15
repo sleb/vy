@@ -327,7 +327,7 @@ impl Tool for AutoMemoryTool {
                         "description": "The user's message to analyze for memory-worthy content"
                     },
                     "context": {
-                        "type": "string",
+                        "type": ["string", "null"],
                         "description": "Optional conversation context to help with analysis"
                     }
                 },
