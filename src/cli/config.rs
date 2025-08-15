@@ -160,6 +160,7 @@ pub fn run_config(
                     google_api_key: String::new(),
                     google_search_engine_id: String::new(),
                     model_id: "gpt-3.5-turbo".to_string(),
+                    preamble: crate::prefs::default_preamble(),
                 }
             });
 
