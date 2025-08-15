@@ -11,9 +11,11 @@ use crate::prefs::{self, Prefs};
 pub mod chat;
 pub mod config;
 pub mod memory_demo;
+pub mod simple_memory;
 
 pub use config::ConfigAction;
 pub use memory_demo::MemoryDemoCommand;
+pub use simple_memory::SimpleMemoryCommand;
 
 static DEFAULT_PREFS_PATH: OnceLock<Option<PathBuf>> = OnceLock::new();
 
@@ -50,6 +52,11 @@ enum Commands {
         #[clap(subcommand)]
         action: MemoryDemoCommand,
     },
+    /// Simple memory system
+    Remember {
+        #[clap(subcommand)]
+        action: SimpleMemoryCommand,
+    },
 }
 
 impl Cli {
@@ -69,6 +76,7 @@ impl Cli {
                 config::run_config(action, prefs_path, |path| self.load_prefs_from_path(path))
             }
             Commands::Memory { action } => action.clone().run().await,
+            Commands::Remember { action } => action.clone().run().await,
         }
     }
 

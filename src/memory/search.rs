@@ -398,7 +398,6 @@ pub struct SearchAnalytics {
 mod tests {
     use super::*;
     use crate::memory::{MockEmbeddingProvider, SqliteMemoryStore};
-    use std::collections::HashMap;
 
     #[tokio::test]
     async fn test_text_match_score() {

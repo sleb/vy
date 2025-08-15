@@ -3,6 +3,7 @@ use rig::completion::{Chat, Message};
 use std::io::{self, Write};
 
 pub mod memory;
+pub mod simple_memory;
 pub mod tools;
 
 pub struct Vy<A: Chat> {

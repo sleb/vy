@@ -5,6 +5,7 @@ use crate::cli::Cli;
 
 mod cli;
 mod prefs;
+mod simple_memory;
 
 #[tokio::main]
 async fn main() {
