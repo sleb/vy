@@ -140,6 +140,58 @@ fn available_keys_message() -> String {
     format!("Available keys: {}", keys.join(", "))
 }
 
+fn prompt_for_sensitive_field(field_name: &str) -> Result<Option<String>> {
+    print!("Enter {} (input will be hidden, press Enter to skip): ", field_name);
+    std::io::stdout()
+        .flush()
+        .context("Failed to flush stdout")?;
+    
+    // Check if running in test mode via environment variable
+    if std::env::var("VY_TEST_MODE").is_ok() {
+        // In test mode, read from stdin normally
+        let mut value = String::new();
+        std::io::stdin()
+            .read_line(&mut value)
+            .context("Failed to read input")?;
+        let trimmed = value.trim().to_string();
+        if trimmed.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(trimmed))
+        }
+    } else {
+        let value = rpassword::read_password().context("Failed to read input")?;
+        if value.trim().is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(value))
+        }
+    }
+}
+
+fn prompt_for_plain_field(field_name: &str, required: bool) -> Result<Option<String>> {
+    if required {
+        print!("Enter {} (required): ", field_name);
+    } else {
+        print!("Enter {} (press Enter to skip): ", field_name);
+    }
+    std::io::stdout()
+        .flush()
+        .context("Failed to flush stdout")?;
+    
+    let mut value = String::new();
+    std::io::stdin()
+        .read_line(&mut value)
+        .context("Failed to read input")?;
+    
+    let trimmed = value.trim().to_string();
+    if trimmed.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(trimmed))
+    }
+}
+
 pub fn run_config(
     action: &ConfigAction,
     prefs_path: &Path,
@@ -274,7 +326,12 @@ pub fn run_config(
                 }
             }
 
-            let default_prefs = Prefs {
+            println!("🚀 Let's set up your Vy configuration!");
+            println!("Fields with defaults will be set automatically. You'll be prompted for required fields.");
+            println!();
+
+            // Start with defaults for all fields
+            let mut prefs = Prefs {
                 llm_api_key: String::new(),
                 google_api_key: String::new(),
                 google_search_engine_id: String::new(),
@@ -285,15 +342,58 @@ pub fn run_config(
                 memory_preamble: crate::prefs::default_memory_preamble(),
             };
 
-            prefs::save_prefs(&default_prefs, prefs_path)?;
+            // Prompt for fields without defaults
+            let mut missing_required = Vec::new();
+
+            // 1. LLM API Key (sensitive, required)
+            if let Some(api_key) = prompt_for_sensitive_field("LLM API key")? {
+                prefs.llm_api_key = api_key;
+            } else {
+                missing_required.push("llm_api_key");
+            }
+
+            // 2. Google API Key (sensitive, optional)
+            if let Some(google_key) = prompt_for_sensitive_field("Google API key (optional)")? {
+                prefs.google_api_key = google_key;
+            }
+
+            // 3. Google Search Engine ID (plain text, only if Google API key provided)
+            if !prefs.google_api_key.is_empty() {
+                if let Some(engine_id) = prompt_for_plain_field("Google Search Engine ID", true)? {
+                    prefs.google_search_engine_id = engine_id;
+                } else {
+                    println!("⚠️  Google Search Engine ID is required when Google API key is provided");
+                    missing_required.push("google_search_engine_id");
+                }
+            }
+
+            // Check if any required fields are missing
+            if !missing_required.is_empty() {
+                eprintln!("❌ Error: Required field(s) not provided: {}", missing_required.join(", "));
+                eprintln!("Configuration initialization aborted.");
+                eprintln!("💡 Run 'vy config init' again to retry, or set individual fields with 'vy config set <field> <value>'");
+                std::process::exit(1);
+            }
+
+            // Save the configuration
+            prefs::save_prefs(&prefs, prefs_path)?;
+            println!();
             println!(
                 "✅ Configuration file initialized at: {}",
                 prefs_path.display()
             );
-            println!("💡 Next steps:");
-            println!("   1. Set your API key: vy config set llm_api_key");
-            println!("   2. Optionally configure Google search: vy config set google_api_key");
-            println!("   3. Start chatting: vy chat");
+            
+            // Show what was configured
+            println!("📋 Configured settings:");
+            println!("   • LLM API key: {}", if prefs.llm_api_key.is_empty() { "❌ Not set" } else { "✅ Set" });
+            println!("   • Google API key: {}", if prefs.google_api_key.is_empty() { "⚪ Optional (not set)" } else { "✅ Set" });
+            println!("   • Google Search Engine ID: {}", if prefs.google_search_engine_id.is_empty() { "⚪ Not needed" } else { "✅ Set" });
+            println!("   • Model: {} (default)", prefs.model_id);
+            println!("   • Other fields: Set to defaults");
+            
+            println!();
+            println!("🎉 You're ready to start using Vy!");
+            println!("💬 Run 'vy chat' to begin a conversation");
         }
     }
 
