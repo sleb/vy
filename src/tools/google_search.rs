@@ -106,25 +106,24 @@ impl Tool for GoogleSearchTool {
             .header("User-Agent", "Vy-AI-Assistant/1.0")
             .send()
             .await
-            .map_err(|e| GoogleSearchError::new(format!("Failed to send request: {}", e)))?;
+            .map_err(|e| GoogleSearchError::new(format!("Failed to send request: {e}")))?;
 
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(GoogleSearchError::new(format!(
-                "Google Search API request failed with status {}: {}",
-                status, error_text
+                "Google Search API request failed with status {status}: {error_text}"
             )));
         }
 
         let response_text = response
             .text()
             .await
-            .map_err(|e| GoogleSearchError::new(format!("Failed to read response: {}", e)))?;
+            .map_err(|e| GoogleSearchError::new(format!("Failed to read response: {e}")))?;
 
         // Parse the JSON response
         let api_response: serde_json::Value = serde_json::from_str(&response_text)
-            .map_err(|e| GoogleSearchError::new(format!("Failed to parse JSON: {}", e)))?;
+            .map_err(|e| GoogleSearchError::new(format!("Failed to parse JSON: {e}")))?;
 
         // Extract search results
         let mut results = Vec::new();

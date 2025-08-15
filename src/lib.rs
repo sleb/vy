@@ -1,19 +1,20 @@
 use anyhow::Result;
-use rig::completion::{Chat, Message};
+use rig::agent::Agent;
+use rig::completion::{Message, Prompt, request::CompletionModel};
 use std::io::{self, Write};
 
 pub mod memory;
 pub mod simple_memory;
 pub mod tools;
 
-pub struct Vy<A: Chat> {
-    agent: A,
+pub struct Vy<M: CompletionModel> {
+    agent: Agent<M>,
     conversation_history: Vec<Message>,
     model_id: String,
 }
 
-impl<A: Chat> Vy<A> {
-    pub fn new(agent: A, model_id: String) -> Self {
+impl<M: CompletionModel> Vy<M> {
+    pub fn new(agent: Agent<M>, model_id: String) -> Self {
         Self {
             agent,
             conversation_history: Vec::new(),
@@ -52,7 +53,7 @@ impl<A: Chat> Vy<A> {
             print!(
                 "🤖 Vy ({}): ",
                 if msg_count > 0 {
-                    format!("{} msgs", msg_count)
+                    format!("{msg_count} msgs")
                 } else {
                     "new chat".to_string()
                 }
@@ -65,11 +66,13 @@ impl<A: Chat> Vy<A> {
             // Get response from agent with error handling
             match self
                 .agent
-                .chat(input, self.conversation_history.clone())
+                .prompt(input)
+                .multi_turn(5)
+                .with_history(&mut self.conversation_history)
                 .await
             {
                 Ok(response) => {
-                    println!("{}", response);
+                    println!("{response}");
                     // Add assistant response to history
                     self.conversation_history
                         .push(Message::assistant(&response));
@@ -77,9 +80,9 @@ impl<A: Chat> Vy<A> {
                 Err(e) => {
                     let formatted_error = Self::format_error(&e);
                     if formatted_error.contains("Invalid API key") {
-                        println!("\n🚨 {}\n", formatted_error);
+                        println!("\n🚨 {formatted_error}\n");
                     } else {
-                        eprintln!("❌ Error: {}", formatted_error);
+                        eprintln!("❌ Error: {formatted_error}");
                         println!("💡 Try rephrasing your question or check your configuration.");
                     }
                 }
@@ -112,10 +115,7 @@ impl<A: Chat> Vy<A> {
 
     fn handle_special_commands(&self, input: &str) -> bool {
         let input_lower = input.to_lowercase();
-        match input_lower.as_str() {
-            "exit" | "quit" | "bye" | "q" => true,
-            _ => false,
-        }
+        matches!(input_lower.as_str(), "exit" | "quit" | "bye" | "q")
     }
 
     fn is_non_exit_command(&mut self, input: &str) -> bool {
@@ -138,13 +138,11 @@ impl<A: Chat> Vy<A> {
                 self.conversation_history.clear();
                 self.print_welcome();
                 if cleared_count > 0 {
-                    println!(
-                        "🧹 Cleared {} messages from conversation history.\n",
-                        cleared_count
-                    );
+                    println!("🧹 Cleared {cleared_count} messages from conversation history.\n");
                 }
                 true
             }
+
             _ => false,
         }
     }

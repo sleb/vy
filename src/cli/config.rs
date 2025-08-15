@@ -189,7 +189,7 @@ pub fn run_config(
             // Validate model_id if that's what we're setting
             if matches!(config_key, ConfigKey::ModelId) {
                 if let Err(warning) = validate_model_id(&actual_value) {
-                    println!("⚠️  Warning: {}", warning);
+                    println!("⚠️  Warning: {warning}");
                     print!("Continue anyway? (y/N): ");
                     std::io::stdout()
                         .flush()

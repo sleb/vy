@@ -52,18 +52,18 @@ impl SimpleMemoryCommand {
         match self {
             SimpleMemoryCommand::Add { fact } => {
                 memory.learn_from_input(&fact, "manual".to_string()).await?;
-                println!("✅ Added fact to memory: {}", fact);
+                println!("✅ Added fact to memory: {fact}");
             }
             SimpleMemoryCommand::List => {
                 let display = memory.list_all();
-                println!("{}", display);
+                println!("{display}");
             }
             SimpleMemoryCommand::Search { query } => {
                 let results = memory.search(&query);
                 if results.is_empty() {
-                    println!("No memories found matching '{}'", query);
+                    println!("No memories found matching '{query}'");
                 } else {
-                    println!("Found {} memories matching '{}':\n", results.len(), query);
+                    println!("Found {} memories matching '{query}':\n", results.len());
                     for (i, entry) in results.iter().enumerate() {
                         println!(
                             "{}. [{}] {}\n   Source: {}\n",
@@ -104,13 +104,12 @@ impl SimpleMemoryCommand {
                             println!("✅ Deleted entry: {}", deleted_entry.fact);
                         }
                         None => {
-                            println!("❌ Entry #{} not found.", index);
+                            println!("❌ Entry #{index} not found.");
                         }
                     }
                 } else {
                     println!(
-                        "❌ Entry #{} not found. Use 'vy remember list' to see all entries.",
-                        index
+                        "❌ Entry #{index} not found. Use 'vy remember list' to see all entries."
                     );
                 }
             }
@@ -130,9 +129,9 @@ impl SimpleMemoryCommand {
             SimpleMemoryCommand::Extract { text } => {
                 let facts = memory.extract_facts(&text);
                 if facts.is_empty() {
-                    println!("No extractable facts found in: '{}'", text);
+                    println!("No extractable facts found in: '{text}'");
                 } else {
-                    println!("Extracted facts from: '{}'\n", text);
+                    println!("Extracted facts from: '{text}'\n");
                     for (i, fact) in facts.iter().enumerate() {
                         println!("{}. {}", i + 1, fact);
                     }

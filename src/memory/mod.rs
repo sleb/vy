@@ -277,8 +277,10 @@ impl<S: MemoryStore, E: EmbeddingProvider> MemoryManager<S, E> {
     pub async fn get_memory_stats(&self) -> Result<MemoryStats> {
         let all_memories = self.store.get_all_memories().await?;
 
-        let mut stats = MemoryStats::default();
-        stats.total_memories = all_memories.len();
+        let mut stats = MemoryStats {
+            total_memories: all_memories.len(),
+            ..Default::default()
+        };
 
         for memory in &all_memories {
             match memory.memory_type {

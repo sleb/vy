@@ -57,9 +57,10 @@ The system supports six primary memory types:
   - Temporal queries
   - Search suggestions and analytics
 
-- **CLI Demo** (`cli/memory_demo.rs`)
-  - Basic command interface
-  - Status reporting and feature overview
+- **CLI Interface** (`cli/simple_memory.rs`)
+  - Complete memory management commands
+  - Add, list, search, and delete memories
+  - Statistics and fact extraction
 
 ### 🚧 In Development
 
@@ -68,7 +69,7 @@ The system supports six primary memory types:
   - Search and filtering
   - Import/export functionality
   - Memory statistics dashboard
-  - *Status: Needs refactoring due to ownership issues*
+  - _Status: Needs refactoring due to ownership issues_
 
 ### 📋 Planned Features
 
@@ -129,15 +130,13 @@ let memories = manager.extract_memories_from_conversation(
 ### CLI Usage
 
 ```bash
-# Show memory system demo
-vy memory demo
-
-# Future CLI commands (when implemented):
-vy memory stats                    # Show memory statistics
-vy memory list --limit 10          # List recent memories
-vy memory search "coffee"          # Search for coffee-related memories
-vy memory add --type fact "User likes tea"  # Add a memory manually
-vy memory export --output backup.json       # Export all memories
+# Memory management commands
+vy remember add "I love hiking"    # Add a memory
+vy remember list                   # List all memories
+vy remember search "hiking"        # Search memories
+vy remember stats                  # Show memory statistics
+vy remember delete 5               # Delete memory by number
+vy remember extract "I like tea"   # Test fact extraction
 ```
 
 ## Configuration
@@ -160,6 +159,7 @@ The system supports multiple embedding providers:
 ### Memory Limits
 
 Current default limits:
+
 - Memory content: 10,000 characters
 - Entities per memory: 50
 - Tags per memory: 20
@@ -263,18 +263,21 @@ RUST_LOG=vy::memory=debug vy chat
 ## Future Roadmap
 
 ### Short Term (Next Release)
+
 - [ ] Complete CLI command implementation
 - [ ] Basic chat integration
 - [ ] Memory extraction improvements
 - [ ] Performance optimizations
 
 ### Medium Term
+
 - [ ] Vector database integration
 - [ ] Advanced search features
 - [ ] Memory validation system
 - [ ] User feedback integration
 
 ### Long Term
+
 - [ ] Multi-user support
 - [ ] Memory sharing between instances
 - [ ] Advanced AI-powered memory curation

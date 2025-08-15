@@ -55,11 +55,6 @@ impl MemoryJournal {
             .collect()
     }
 
-    /// Get the most recent N entries
-    pub fn recent_entries(&self, limit: usize) -> Vec<&MemoryEntry> {
-        self.entries.iter().rev().take(limit).collect()
-    }
-
     /// Get all entries as a formatted string for display
     pub fn to_display_string(&self) -> String {
         if self.entries.is_empty() {
@@ -143,6 +138,7 @@ impl SimpleMemory {
         let patterns = [
             ("my name is ", "User's name is "),
             ("i am ", "User is "),
+            ("i'm ", "User is "),
             ("i work at ", "User works at "),
             ("i work for ", "User works for "),
             ("i live in ", "User lives in "),
@@ -160,6 +156,14 @@ impl SimpleMemory {
             ("i drive ", "User drives "),
             ("i study ", "User studies "),
             ("i'm studying ", "User is studying "),
+            ("i can't stand ", "User can't stand "),
+            ("i don't like ", "User doesn't like "),
+            ("i enjoy ", "User enjoys "),
+            ("i play ", "User plays "),
+            ("i went to ", "User went to "),
+            ("i graduated from ", "User graduated from "),
+            ("my job is ", "User's job is "),
+            ("my profession is ", "User's profession is "),
         ];
 
         for (trigger, prefix) in &patterns {
@@ -174,7 +178,7 @@ impl SimpleMemory {
                         .trim();
 
                     if !fact_part.is_empty() && fact_part.len() < 200 {
-                        facts.push(format!("{}{}", prefix, fact_part));
+                        facts.push(format!("{prefix}{fact_part}"));
                     }
                 }
             }
@@ -205,11 +209,6 @@ impl SimpleMemory {
     /// Search for relevant memories
     pub fn search(&self, query: &str) -> Vec<&MemoryEntry> {
         self.journal.search(query)
-    }
-
-    /// Get recent memories for context
-    pub fn get_recent_context(&self, limit: usize) -> Vec<&MemoryEntry> {
-        self.journal.recent_entries(limit)
     }
 
     /// Get all memories as a display string

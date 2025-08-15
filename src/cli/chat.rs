@@ -1,44 +1,63 @@
 use anyhow::{Context, Result};
 use rig::{client::completion::CompletionClientDyn, providers::openai};
-use vy::{Vy, tools::GoogleSearchTool};
+use vy::{
+    Vy,
+    tools::{GoogleSearchTool, MemoryStoreTool, MemoryTool},
+};
 
 use crate::prefs::Prefs;
 
 pub async fn run_chat(prefs: &Prefs) -> Result<()> {
+    // Check for unsupported models
+    if prefs.model_id == "gpt-5-mini" || prefs.model_id == "gpt-5" {
+        eprintln!(
+            "❌ Error: {} is not currently supported due to tool calling compatibility issues.",
+            prefs.model_id
+        );
+        eprintln!("💡 Please use one of these supported models instead:");
+        eprintln!("   • gpt-4o");
+        eprintln!("   • gpt-4o-mini");
+        eprintln!("   • gpt-4");
+        eprintln!("   • gpt-3.5-turbo");
+        eprintln!("\n   To change your model: vy config set model_id");
+        return Ok(());
+    }
+
     let client = openai::Client::builder(&prefs.llm_api_key)
         .build()
         .context("Failed to create LLM client")?;
 
-    // Check if this is gpt-5-mini which has tool calling issues
-    let is_gpt5_mini = prefs.model_id == "gpt-5-mini";
+    // Create tools
+    let google_search_tool = GoogleSearchTool::new(
+        prefs.google_api_key.clone(),
+        prefs.google_search_engine_id.clone(),
+    );
+    let memory_tool = MemoryTool::new();
+    let memory_store_tool = MemoryStoreTool::new();
 
-    let agent = if is_gpt5_mini {
-        // For gpt-5-mini, disable tools due to compatibility issues
-        client
-            .agent(&prefs.model_id)
-            .preamble(r#"
+    let agent = client
+        .agent(&prefs.model_id)
+        .preamble(r#"
 You are Vy, a female AI assistant. Your are confident, helpful, and sometimes snarky.
-Note: Google search functionality is temporarily unavailable with gpt-5-mini due to tool calling compatibility issues.
-This is expected to be resolved in future updates. You can still help with general questions, coding, analysis,
-and other tasks using your training data. For real-time information, consider switching to gpt-4o or gpt-4o-mini."#)
-            .build()
-    } else {
-        // For other models, use tools normally
-        let google_search_tool = GoogleSearchTool::new(
-            prefs.google_api_key.clone(),
-            prefs.google_search_engine_id.clone(),
-        );
+You have access to both real-time Google search and personal memory about the user.
 
-        client
-            .agent(&prefs.model_id)
-            .preamble(r#"
-You are Vy, a female AI assistant. Your are confident, helpful, and sometimes snarky.
-You have access to real-time Google search.
-You can search for current information, news, facts, and answers to questions.
-When users ask about current events, specific information, or anything that might benefit from a web search, use the google_search tool to provide accurate and up-to-date information."#)
-            .tool(google_search_tool)
-            .build()
-    };
+Use the google_search tool for:
+- Current events, news, and real-time information
+- Factual queries that benefit from web search
+- Up-to-date information not in your training data
+
+Use the search_memory tool to:
+- Search for relevant information about the user when answering questions
+
+Use the store_memory tool to:
+- Store new facts you learn about the user during conversations
+- Remember user preferences, personal details, and important information
+
+Always check memory first for personal context, then use Google search if you need additional information."#)
+        .tool(google_search_tool)
+        .tool(memory_tool)
+        .tool(memory_store_tool)
+        .build();
 
     let vy = Vy::new(agent, prefs.model_id.clone());
     vy.chat().await.context("Failed to start Vy chatbot")?;

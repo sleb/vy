@@ -354,8 +354,10 @@ impl<S: MemoryStore, E: EmbeddingProvider> MemorySearchEngine<S, E> {
     pub async fn get_search_analytics(&self) -> Result<SearchAnalytics> {
         let all_memories = self.store.get_all_memories().await?;
 
-        let mut analytics = SearchAnalytics::default();
-        analytics.total_memories = all_memories.len();
+        let mut analytics = SearchAnalytics {
+            total_memories: all_memories.len(),
+            ..Default::default()
+        };
 
         let mut type_counts: HashMap<MemoryType, usize> = HashMap::new();
         let mut entity_counts: HashMap<String, usize> = HashMap::new();
@@ -442,9 +444,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_entity_search() {
-        let mut store = SqliteMemoryStore::new_in_memory().await.unwrap();
+        let store = SqliteMemoryStore::new_in_memory().await.unwrap();
         let embeddings = MockEmbeddingProvider::new(256);
-        let search_engine = MemorySearchEngine::new(store, embeddings);
+        let mut search_engine = MemorySearchEngine::new(store, embeddings);
 
         // Store a test memory
         let memory = Memory::new(
