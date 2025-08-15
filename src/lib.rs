@@ -236,7 +236,7 @@ impl<M: CompletionModel> Vy<M> {
 
         // Use LLM-based memory analysis for better fact extraction
         match memory
-            .learn_from_input_llm(
+            .learn_from_input(
                 &combined_conversation,
                 conversation_id.clone(),
                 &self.api_key,

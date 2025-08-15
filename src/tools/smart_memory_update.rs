@@ -94,12 +94,15 @@ impl SmartMemoryUpdateTool {
             "Consider what type of information this is (employment, personal details, preferences, location, etc.) and whether it conflicts with existing memories.".to_string()
         );
 
-        // Store the new information as a raw memory for now
-        // The LLM can decide what to do with conflicting information
-        let _learned_facts = memory
-            .learn_from_input(new_information, "smart_update_input".to_string())
+        // Store the new information directly - LLM extraction happens at conversation level
+        memory.add_entry_direct(
+            new_information.to_string(),
+            "smart_update_input".to_string(),
+        );
+        memory
+            .save()
             .await
-            .map_err(|e| SmartMemoryUpdateError::new(format!("Failed to store memory: {e}")))?;
+            .map_err(|e| SmartMemoryUpdateError::new(format!("Failed to save memory: {e}")))?;
 
         Ok(SmartMemoryUpdateResponse {
             success: true,

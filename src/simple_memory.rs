@@ -132,14 +132,6 @@ impl SimpleMemory {
         Ok(())
     }
 
-    /// Legacy fact extraction using simple patterns (deprecated - use LLM-based extraction instead)
-    /// Kept for backward compatibility with existing code that still calls it
-    pub fn extract_facts(&self, _user_input: &str) -> Vec<String> {
-        // Return empty since we now use LLM-based extraction
-        // This method is only kept for backward compatibility
-        Vec::new()
-    }
-
     /// Extract facts using LLM analysis for better memory detection
     pub async fn extract_facts_llm(&self, user_input: &str, api_key: &str) -> Result<Vec<String>> {
         let client = openai::Client::builder(api_key)
@@ -207,40 +199,15 @@ Return ONLY a JSON array of NEW facts, like:
         Ok(facts)
     }
 
-    /// Add a memory from user input
-    pub async fn learn_from_input(
-        &mut self,
-        user_input: &str,
-        source: String,
-    ) -> Result<Vec<String>> {
-        let facts = self.extract_facts(user_input);
-
-        for fact in &facts {
-            self.journal.add_entry(fact.clone(), source.clone());
-        }
-
-        if !facts.is_empty() {
-            self.save().await?;
-        }
-
-        Ok(facts)
-    }
-
     /// Add a memory from user input using LLM analysis
-    pub async fn learn_from_input_llm(
+    pub async fn learn_from_input(
         &mut self,
         user_input: &str,
         source: String,
         api_key: &str,
     ) -> Result<Vec<String>> {
-        // Try LLM-based extraction first
-        let mut facts = match self.extract_facts_llm(user_input, api_key).await {
-            Ok(llm_facts) if !llm_facts.is_empty() => llm_facts,
-            _ => {
-                // Fallback to pattern-based extraction
-                self.extract_facts(user_input)
-            }
-        };
+        // Use LLM-based extraction
+        let mut facts = self.extract_facts_llm(user_input, api_key).await?;
 
         // Filter out very short, vague, or generic facts
         facts.retain(|fact| {
@@ -483,26 +450,6 @@ mod tests {
     use tempfile::NamedTempFile;
 
     #[test]
-    fn test_fact_extraction() {
-        let memory = SimpleMemory::new(PathBuf::from("test.json"));
-
-        let facts = memory.extract_facts("Hi, my name is Alice and I work at Google.");
-
-        // extract_facts now returns empty - LLM-based extraction is used instead
-        assert_eq!(facts.len(), 0);
-    }
-
-    #[test]
-    fn test_preferences_extraction() {
-        let memory = SimpleMemory::new(PathBuf::from("test.json"));
-
-        let facts = memory.extract_facts("I love pizza and I hate broccoli.");
-
-        // extract_facts now returns empty - LLM-based extraction is used instead
-        assert_eq!(facts.len(), 0);
-    }
-
-    #[test]
     fn test_search() {
         let mut journal = MemoryJournal::new();
         journal.add_entry("User likes coffee".to_string(), "chat".to_string());
@@ -521,8 +468,6 @@ mod tests {
         // Create and save some memories
         {
             let mut memory = SimpleMemory::new(file_path.clone());
-            // learn_from_input now returns empty since extract_facts is deprecated
-            // This test now just verifies the save/load mechanism works
             memory.add_entry_direct("User's name is Bob".to_string(), "test".to_string());
             memory.save().await.unwrap();
         }

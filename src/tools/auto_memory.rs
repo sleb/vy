@@ -1,4 +1,3 @@
-use crate::simple_memory::{SimpleMemory, default_memory_file};
 use anyhow::Result;
 use rig::{completion::ToolDefinition, tool::Tool};
 use serde::{Deserialize, Serialize};
@@ -13,12 +12,6 @@ impl std::fmt::Display for AutoMemoryError {
 }
 
 impl std::error::Error for AutoMemoryError {}
-
-impl AutoMemoryError {
-    fn new(msg: impl Into<String>) -> Self {
-        Self(msg.into())
-    }
-}
 
 #[derive(Debug, Deserialize)]
 pub struct AutoMemoryArgs {
@@ -111,11 +104,8 @@ impl AutoMemoryTool {
         let memory_type = Self::determine_memory_type(message);
         let confidence = Self::calculate_confidence(message, &priority);
 
-        // Use existing extraction logic from SimpleMemory
-        let memory_file = default_memory_file()
-            .map_err(|e| AutoMemoryError::new(format!("Failed to get memory file path: {e}")))?;
-        let temp_memory = SimpleMemory::new(memory_file);
-        let extracted_facts = temp_memory.extract_facts(message);
+        // No fact extraction needed since we now use LLM-based analysis in the main chat flow
+        let extracted_facts = Vec::new();
 
         let should_store = match priority {
             MemoryPriority::High => confidence >= 0.6,

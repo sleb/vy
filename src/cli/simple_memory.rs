@@ -57,8 +57,34 @@ impl SimpleMemoryCommand {
 
         match self {
             SimpleMemoryCommand::Add { fact } => {
-                memory.learn_from_input(&fact, "manual".to_string()).await?;
-                println!("✅ Added fact to memory: {fact}");
+                // Load API key for LLM-based extraction
+                let api_key = std::env::var("OPENAI_API_KEY").or_else(|_| {
+                    // Try to load from config file
+                    if let Some(proj_dirs) = directories::ProjectDirs::from("vy", "", "") {
+                        let config_path = proj_dirs.config_dir().join("prefs.toml");
+                        match crate::prefs::load_prefs(&config_path) {
+                            Ok(prefs) => Ok(prefs.llm_api_key),
+                            Err(_) => Err("No API key found".to_string()),
+                        }
+                    } else {
+                        Err("No config directory".to_string())
+                    }
+                });
+
+                match api_key {
+                    Ok(key) if !key.is_empty() => {
+                        memory
+                            .learn_from_input(&fact, "manual".to_string(), &key)
+                            .await?;
+                        println!("✅ Added fact to memory: {fact}");
+                    }
+                    _ => {
+                        println!(
+                            "❌ No OpenAI API key found. Set OPENAI_API_KEY environment variable or run 'vy config set llm_api_key'"
+                        );
+                        return Ok(());
+                    }
+                }
             }
             SimpleMemoryCommand::List => {
                 let display = memory.list_all();
@@ -132,16 +158,10 @@ impl SimpleMemoryCommand {
                 memory.clear().await?;
                 println!("🗑️  All memories have been cleared.");
             }
-            SimpleMemoryCommand::Extract { text } => {
-                let facts = memory.extract_facts(&text);
-                if facts.is_empty() {
-                    println!("No extractable facts found in: '{text}'");
-                } else {
-                    println!("Extracted facts from: '{text}'\n");
-                    for (i, fact) in facts.iter().enumerate() {
-                        println!("{}. {}", i + 1, fact);
-                    }
-                }
+            SimpleMemoryCommand::Extract { text: _ } => {
+                println!(
+                    "❌ Extract command has been removed. Use the chat interface for LLM-based memory extraction instead."
+                );
             }
             SimpleMemoryCommand::Vacuum { yes } => {
                 let entries_before = memory.entry_count();

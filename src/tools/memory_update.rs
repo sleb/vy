@@ -84,13 +84,14 @@ impl MemoryUpdateTool {
             }
         }
 
-        // Add the new fact
-        let learned_facts = memory
-            .learn_from_input(new_fact, "update".to_string())
+        // Add the new fact directly - LLM extraction happens at conversation level
+        memory.add_entry_direct(new_fact.to_string(), "update".to_string());
+        memory
+            .save()
             .await
-            .map_err(|e| MemoryUpdateError::new(format!("Failed to store new memory: {e}")))?;
+            .map_err(|e| MemoryUpdateError::new(format!("Failed to save memory: {e}")))?;
 
-        added_facts.extend(learned_facts.clone());
+        added_facts.push(new_fact.to_string());
 
         let message = if !removed_facts.is_empty() {
             format!(
@@ -167,7 +168,6 @@ mod tests {
         let mut memory = SimpleMemory::new(file_path);
 
         // Add some initial employment info
-        // Use add_entry_direct since learn_from_input now returns empty (extract_facts deprecated)
         memory.add_entry_direct("User works at Microsoft".to_string(), "test".to_string());
         memory.add_entry_direct(
             "User is a software engineer".to_string(),
@@ -188,19 +188,6 @@ mod tests {
             .unwrap();
 
         assert!(result.success);
-        // With simplified logic, we only remove facts that match the search query
-        // "employment" doesn't match "Microsoft" or "software engineer" so nothing is removed
-        // assert!(!result.removed_facts.is_empty());
-        // learn_from_input now returns empty, so no facts are added
-        // assert!(!result.added_facts.is_empty());
-
-        // With the simplified logic, old info may not be removed unless search query matches
-        // let microsoft_results = memory.search("Microsoft");
-        // assert!(microsoft_results.is_empty());
-
-        // New info won't be added since learn_from_input returns empty
-        // let amazon_results = memory.search("Amazon");
-        // assert!(!amazon_results.is_empty());
     }
 
     #[tokio::test]
@@ -238,26 +225,6 @@ mod tests {
         println!("Removed facts: {:?}", result.removed_facts);
         println!("Added facts: {:?}", result.added_facts);
 
-        // With simplified search-based logic, items are only removed if they match search query "work"
-        // "software engineer" doesn't contain "work", so it won't be removed
-        // let engineer_results = memory.search("software engineer");
-        // assert!(
-        //     engineer_results.is_empty(),
-        //     "Software engineer should be removed"
-        // );
-
-        // "Microsoft" doesn't contain "work", so it won't be removed either
-        // let microsoft_results = memory.search("Microsoft");
-        // assert!(microsoft_results.is_empty(), "Microsoft should be removed");
-
-        // Since learn_from_input now returns empty (extract_facts deprecated),
-        // new employment info won't be automatically added
-        // let amazon_results = memory.search("Amazon");
-        // assert!(!amazon_results.is_empty(), "Amazon should be found");
-
-        // let manager_results = memory.search("Manager");
-        // assert!(!manager_results.is_empty(), "Manager should be found");
-
         // Verify non-employment memories remain
         let _coffee_results = memory.search("coffee");
         assert!(
@@ -277,7 +244,6 @@ mod tests {
         let mut memory = SimpleMemory::new(file_path);
 
         // Add initial name
-        // Use add_entry_direct since learn_from_input now returns empty
         memory.add_entry_direct("User's name is John".to_string(), "test".to_string());
 
         let tool = MemoryUpdateTool::new();
@@ -294,17 +260,10 @@ mod tests {
             .unwrap();
 
         assert!(result.success);
-        // With simplified logic, only entries matching search query "name" are removed
-        // The entry "User's name is John" contains "name" so it should be removed
         assert!(!result.removed_facts.is_empty());
 
-        // Verify old name is removed
         let john_results = memory.search("John");
         assert!(john_results.is_empty());
-
-        // Since learn_from_input now returns empty, new name won't be added automatically
-        // let scott_results = memory.search("Scott");
-        // assert!(!scott_results.is_empty());
     }
 
     #[tokio::test]
@@ -333,15 +292,8 @@ mod tests {
 
         assert!(result.success);
 
-        // With simplified logic, only entries matching "coffee" search query are removed
-        // "User enjoys coffee" contains "coffee" so it should be removed
-        // "User likes tea" doesn't contain "coffee" so it should remain
         let tea_results = memory.search("tea");
         assert!(!tea_results.is_empty());
-
-        // The coffee entry should be removed by the search logic
-        let coffee_results = memory.search("coffee");
-        // Note: this might be empty since the old coffee entry was removed and learn_from_input returns empty
     }
 
     // Removed tests for keyword-based detection methods that were deleted

@@ -82,26 +82,18 @@ impl Tool for MemoryStoreTool {
             .await
             .map_err(|e| MemoryStoreError::new(format!("Failed to load memory: {e}")))?;
 
-        let learned_facts = memory
-            .learn_from_input(&args.fact, "tool".to_string())
+        // Store the fact directly - LLM extraction happens at conversation level
+        memory.add_entry_direct(args.fact.clone(), "tool".to_string());
+        memory
+            .save()
             .await
-            .map_err(|e| MemoryStoreError::new(format!("Failed to store memory: {e}")))?;
+            .map_err(|e| MemoryStoreError::new(format!("Failed to save memory: {e}")))?;
 
-        if learned_facts.is_empty() {
-            Ok(MemoryStoreResponse {
-                success: false,
-                message: "No extractable facts found in the provided text".to_string(),
-                stored_facts: vec![],
-                count: 0,
-            })
-        } else {
-            let count = learned_facts.len();
-            Ok(MemoryStoreResponse {
-                success: true,
-                message: format!("Successfully stored {count} new facts"),
-                stored_facts: learned_facts,
-                count,
-            })
-        }
+        Ok(MemoryStoreResponse {
+            success: true,
+            message: "Successfully stored fact to memory".to_string(),
+            stored_facts: vec![args.fact],
+            count: 1,
+        })
     }
 }
