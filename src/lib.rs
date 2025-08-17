@@ -1,7 +1,6 @@
 use anyhow::Result;
 use rig::agent::Agent;
 use rig::completion::{Message, Prompt, request::CompletionModel};
-use std::io::{self, Write};
 
 pub mod simple_memory;
 pub mod tools;
@@ -32,74 +31,6 @@ impl<M: CompletionModel> Vy<M> {
         }
     }
 
-    pub async fn chat(mut self) -> Result<()> {
-        self.print_welcome();
-
-        loop {
-            // Prompt for user input
-            print!("💬 You: ");
-            io::stdout().flush()?;
-
-            let mut input = String::new();
-            io::stdin().read_line(&mut input)?;
-            let input = input.trim();
-
-            // Handle special commands
-            if self.handle_special_commands(input) {
-                break;
-            }
-
-            if input.is_empty() {
-                continue;
-            }
-
-            // Check if it's a special command that doesn't exit
-            if self.is_non_exit_command(input) {
-                continue;
-            }
-
-            // Show thinking indicator
-            print!("🤖 Vy: ");
-            io::stdout().flush()?;
-
-            // Add user message to history
-            self.conversation_history.push(Message::user(input));
-
-            // Get response from agent with error handling
-            match self
-                .agent
-                .prompt(input)
-                .multi_turn(5)
-                .with_history(&mut self.conversation_history)
-                .await
-            {
-                Ok(response) => {
-                    println!("{response}");
-                    // Add assistant response to history
-                    self.conversation_history
-                        .push(Message::assistant(&response));
-                }
-                Err(e) => {
-                    let formatted_error = Self::format_error(&e);
-                    if formatted_error.contains("Invalid API key") {
-                        println!("\n🚨 {formatted_error}\n");
-                    } else {
-                        eprintln!("❌ Error: {formatted_error}");
-                        println!("💡 Try rephrasing your question or check your configuration.");
-                    }
-                }
-            }
-
-            println!(); // Add spacing between exchanges
-        }
-
-        // Analyze conversation for memories before saying goodbye
-        self.analyze_conversation_memories().await?;
-
-        self.print_goodbye();
-        Ok(())
-    }
-
     pub async fn chat_tui(mut self) -> Result<()> {
         use crossterm::{
             event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
@@ -108,8 +39,8 @@ impl<M: CompletionModel> Vy<M> {
         };
         use ratatui::{
             backend::CrosstermBackend,
-            layout::{Constraint, Direction, Layout, Rect},
-            style::{Color, Modifier, Style},
+            layout::{Constraint, Direction, Layout},
+            style::{Color, Style},
             text::{Line, Span, Text},
             widgets::{Block, Borders, Clear, Paragraph, Wrap},
             Terminal,
@@ -326,97 +257,6 @@ impl<M: CompletionModel> Vy<M> {
         self.print_goodbye();
 
         Ok(())
-
-        // Helper: centered rect for popups
-        fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-            let popup_layout = Layout::default()
-                .direction(Direction::Vertical)
-                .constraints([
-                    Constraint::Percentage((100 - percent_y) / 2),
-                    Constraint::Percentage(percent_y),
-                    Constraint::Percentage((100 - percent_y) / 2),
-                ])
-                .split(r);
-
-            let horizontal = Layout::default()
-                .direction(Direction::Horizontal)
-                .constraints([
-                    Constraint::Percentage((100 - percent_x) / 2),
-                    Constraint::Percentage(percent_x),
-                    Constraint::Percentage((100 - percent_x) / 2),
-                ])
-                .split(popup_layout[1]);
-
-            horizontal[1]
-        }
-    }
-
-    fn print_welcome(&self) {
-        println!("🤖 Vy - {} | Type 'help' for commands", self.model_id);
-        if self.model_id == "gpt-5-mini" {
-            println!("⚠️  Note: Google search is disabled for gpt-5-mini compatibility");
-        }
-        println!();
-    }
-
-    fn handle_special_commands(&self, input: &str) -> bool {
-        let input_lower = input.to_lowercase();
-        matches!(input_lower.as_str(), "exit" | "quit" | "bye" | "q")
-    }
-
-    fn is_non_exit_command(&mut self, input: &str) -> bool {
-        let input_lower = input.to_lowercase();
-        match input_lower.as_str() {
-            "help" => {
-                self.print_help();
-                true
-            }
-            "history" => {
-                self.print_history();
-                true
-            }
-            "clear" => {
-                // Clear screen (works on most terminals)
-                print!("\x1B[2J\x1B[1;1H");
-                io::stdout().flush().ok();
-                // Clear conversation history
-                let cleared_count = self.conversation_history.len();
-                self.conversation_history.clear();
-                self.print_welcome();
-                if cleared_count > 0 {
-                    println!("🧹 Cleared {cleared_count} messages from conversation history.\n");
-                }
-                true
-            }
-
-            _ => false,
-        }
-    }
-
-    fn print_help(&self) {
-        println!("📚 Vy Commands:");
-        println!("  exit, quit, bye, q    End the conversation");
-        println!("  help                  Show this help message");
-        println!("  history              Show conversation history");
-        println!("  clear                Clear the screen and start fresh");
-        println!();
-        println!("💬 Just type naturally to chat with Vy!");
-        println!("🧠 Your conversations are automatically remembered for context");
-        println!("🔍 Vy has access to real-time Google search and personal memory");
-        println!();
-    }
-
-    fn print_history(&self) {
-        if self.conversation_history.is_empty() {
-            println!("📝 No conversation history yet.");
-        } else {
-            println!(
-                "📝 Conversation History: {} messages stored",
-                self.conversation_history.len()
-            );
-            println!("   (Messages are kept for context during this session)");
-        }
-        println!();
     }
 
     /// Analyze the entire conversation for memory-worthy information
@@ -454,7 +294,7 @@ impl<M: CompletionModel> Vy<M> {
                         // Extract text from OneOrMany content using debug format
                         let debug_str = format!("{content:?}");
                         // Parse the text content from the debug string
-                        // Format is typically: OneOrMany { first: Text(Text { text: "actual_text" }), rest: [] }
+                        // Format is typically: OneOrMany { first: Text(Text { text: \"actual_text\" }), rest: [] }
                         if let Some(start) = debug_str.find("text: \"") {
                             let start_idx = start + 7; // length of "text: \""
                             if let Some(end) = debug_str[start_idx..].find("\" }") {
@@ -545,4 +385,26 @@ impl<M: CompletionModel> Vy<M> {
             }
         }
     }
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: ratatui::layout::Rect) -> ratatui::layout::Rect {
+    let popup_layout = ratatui::layout::Layout::default()
+        .direction(ratatui::layout::Direction::Vertical)
+        .constraints([
+            ratatui::layout::Constraint::Percentage((100 - percent_y) / 2),
+            ratatui::layout::Constraint::Percentage(percent_y),
+            ratatui::layout::Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+
+    let horizontal = ratatui::layout::Layout::default()
+        .direction(ratatui::layout::Direction::Horizontal)
+        .constraints([
+            ratatui::layout::Constraint::Percentage((100 - percent_x) / 2),
+            ratatui::layout::Constraint::Percentage(percent_x),
+            ratatui::layout::Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1]);
+
+    horizontal[1]
 }
