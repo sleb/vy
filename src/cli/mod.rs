@@ -53,12 +53,6 @@ enum Commands {
         #[clap(subcommand)]
         action: SimpleMemoryCommand,
     },
-    /// View or edit the preamble
-    Preamble {
-        /// Edit the preamble in your default editor
-        #[clap(long)]
-        edit: bool,
-    },
 }
 
 impl Cli {
@@ -87,15 +81,6 @@ impl Cli {
                 }
             }
             Commands::Remember { action } => action.clone().run().await,
-            Commands::Preamble { edit } => {
-                let prefs_path = self
-                    .prefs_path
-                    .as_deref()
-                    .or(default_prefs_path())
-                    .context("Please specify a prefs path via --prefs-path")?;
-
-                self.run_preamble(*edit, prefs_path).await
-            }
         }
     }
 
@@ -106,16 +91,6 @@ impl Cli {
             .or(default_prefs_path())
             .context("Please specify a prefs path via --prefs-path")?;
         prefs::load_or_create_prefs(prefs_path)
-    }
-
-    fn load_prefs_from_path(&self, prefs_path: &Path) -> Result<Prefs> {
-        debug!("prefs_path: {prefs_path:?}");
-
-        let prefs = prefs::load_prefs(prefs_path)
-            .with_context(|| format!("Failed to load prefs from path: {}", prefs_path.display()))?;
-        debug!("prefs: {prefs:?}");
-
-        Ok(prefs)
     }
 
     fn load_prefs_strict(&self, prefs_path: &Path) -> Result<Prefs> {
@@ -131,52 +106,6 @@ impl Cli {
         debug!("prefs: {prefs:?}");
 
         Ok(prefs)
-    }
-
-    async fn run_preamble(&self, edit: bool, prefs_path: &Path) -> Result<()> {
-        let mut prefs = self.load_prefs_from_path(prefs_path)?;
-
-        if edit {
-            // Create a temporary file with the current preamble
-            let temp_file = std::env::temp_dir().join("vy_preamble.txt");
-            std::fs::write(&temp_file, &prefs.preamble)?;
-
-            // Open in default editor
-            let editor = std::env::var("EDITOR").unwrap_or_else(|_| "nano".to_string());
-            let status = std::process::Command::new(&editor)
-                .arg(&temp_file)
-                .status()
-                .with_context(|| format!("Failed to open editor: {}", editor))?;
-
-            if !status.success() {
-                anyhow::bail!("Editor exited with non-zero status");
-            }
-
-            // Read back the edited content
-            let new_preamble =
-                std::fs::read_to_string(&temp_file).context("Failed to read edited preamble")?;
-
-            // Clean up temp file
-            let _ = std::fs::remove_file(&temp_file);
-
-            // Update prefs if changed
-            if new_preamble != prefs.preamble {
-                prefs.preamble = new_preamble;
-                prefs::save_prefs(&prefs, prefs_path)?;
-                println!("✅ Preamble updated successfully!");
-            } else {
-                println!("ℹ️  Preamble unchanged.");
-            }
-        } else {
-            // Just display the current preamble
-            println!("Current preamble:");
-            println!("{}", "─".repeat(50));
-            println!("{}", prefs.preamble);
-            println!("{}", "─".repeat(50));
-            println!("To edit: vy preamble --edit");
-        }
-
-        Ok(())
     }
 
     async fn run_config_edit(&self, prefs_path: &Path) -> Result<()> {

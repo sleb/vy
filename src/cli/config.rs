@@ -13,7 +13,6 @@ pub enum ConfigKey {
     ModelId,
     MemoryModelId,
     MemorySimilarityModelId,
-    MemoryPreamble,
 }
 
 impl ConfigKey {
@@ -25,7 +24,6 @@ impl ConfigKey {
             "model_id" => Some(Self::ModelId),
             "memory_model_id" => Some(Self::MemoryModelId),
             "memory_similarity_model_id" => Some(Self::MemorySimilarityModelId),
-            "memory_preamble" => Some(Self::MemoryPreamble),
             _ => None,
         }
     }
@@ -38,7 +36,6 @@ impl ConfigKey {
             Self::ModelId => "model_id",
             Self::MemoryModelId => "memory_model_id",
             Self::MemorySimilarityModelId => "memory_similarity_model_id",
-            Self::MemoryPreamble => "memory_preamble",
         }
     }
 
@@ -54,7 +51,6 @@ impl ConfigKey {
             Self::ModelId => &prefs.model_id,
             Self::MemoryModelId => &prefs.memory_model_id,
             Self::MemorySimilarityModelId => &prefs.memory_similarity_model_id,
-            Self::MemoryPreamble => &prefs.memory_preamble,
         }
     }
 
@@ -66,7 +62,6 @@ impl ConfigKey {
             Self::ModelId => prefs.model_id = value,
             Self::MemoryModelId => prefs.memory_model_id = value,
             Self::MemorySimilarityModelId => prefs.memory_similarity_model_id = value,
-            Self::MemoryPreamble => prefs.memory_preamble = value,
         }
     }
 
@@ -78,7 +73,6 @@ impl ConfigKey {
             Self::ModelId,
             Self::MemoryModelId,
             Self::MemorySimilarityModelId,
-            Self::MemoryPreamble,
         ]
     }
 }
@@ -275,10 +269,8 @@ pub fn run_config(
                 google_api_key: String::new(),
                 google_search_engine_id: String::new(),
                 model_id: "gpt-3.5-turbo".to_string(),
-                preamble: crate::prefs::default_preamble(),
                 memory_model_id: "gpt-4".to_string(),
                 memory_similarity_model_id: "gpt-3.5-turbo".to_string(),
-                memory_preamble: crate::prefs::default_memory_preamble(),
             };
 
             // Prompt for LLM API key (required)

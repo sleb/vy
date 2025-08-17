@@ -31,7 +31,7 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
         .context("Failed to create LLM client")?;
 
     // Load memory context and enhance preamble
-    let enhanced_preamble = load_memory_enhanced_preamble(&prefs.preamble).await?;
+    let enhanced_preamble = load_memory_enhanced_preamble().await?;
 
     // Create tools
     let google_search_tool = GoogleSearchTool::new(
@@ -58,7 +58,6 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
         prefs.model_id.clone(),
         prefs.llm_api_key.clone(),
         prefs.memory_model_id.clone(),
-        prefs.memory_preamble.clone(),
     );
     vy.chat().await.context("Failed to start Vy chatbot")?;
 
@@ -66,7 +65,8 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
 }
 
 /// Load relevant memories and enhance the preamble with user context
-async fn load_memory_enhanced_preamble(base_preamble: &str) -> Result<String> {
+async fn load_memory_enhanced_preamble() -> Result<String> {
+    let base_preamble = crate::prefs::default_preamble();
     // Get memory file path
     let memory_file = match default_memory_file() {
         Ok(path) => path,
@@ -204,7 +204,7 @@ Limit to maximum 8 facts, prioritizing recent and permanent information."#,
 
     let agent = client
         .agent(&prefs.memory_model_id)
-        .preamble(&prefs.memory_preamble)
+        .preamble(&crate::prefs::default_memory_preamble())
         .build();
 
     let response = agent.prompt(&analysis_prompt).await?;

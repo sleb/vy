@@ -14,6 +14,10 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs as async_fs;
 
+fn default_memory_preamble() -> &'static str {
+    "You are an expert at extracting and formatting important personal information from conversations."
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MemoryEntry {
     pub timestamp: DateTime<Utc>,
@@ -138,7 +142,6 @@ impl SimpleMemory {
         user_input: &str,
         api_key: &str,
         memory_model_id: &str,
-        memory_preamble: &str,
     ) -> Result<Vec<String>> {
         let client = openai::Client::builder(api_key)
             .build()
@@ -185,7 +188,7 @@ Return ONLY a JSON array of NEW facts, like:
 
         let agent = client
             .agent(memory_model_id)
-            .preamble(memory_preamble)
+            .preamble(default_memory_preamble())
             .build();
 
         let response = agent
@@ -212,11 +215,10 @@ Return ONLY a JSON array of NEW facts, like:
         source: String,
         api_key: &str,
         memory_model_id: &str,
-        memory_preamble: &str,
     ) -> Result<Vec<String>> {
         // Use LLM-based extraction
         let mut facts = self
-            .extract_facts_llm(user_input, api_key, memory_model_id, memory_preamble)
+            .extract_facts_llm(user_input, api_key, memory_model_id)
             .await?;
 
         // Filter out very short, vague, or generic facts

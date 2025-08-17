@@ -76,7 +76,6 @@ impl SimpleMemoryCommand {
                             "manual".to_string(),
                             &prefs.llm_api_key,
                             &prefs.memory_model_id,
-                            &prefs.memory_preamble,
                         )
                         .await?;
                     println!("✅ Added fact to memory: {fact}");

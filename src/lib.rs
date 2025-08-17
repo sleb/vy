@@ -14,7 +14,6 @@ pub struct Vy<M: CompletionModel> {
     model_id: String,
     api_key: String,
     memory_model_id: String,
-    memory_preamble: String,
 }
 
 impl<M: CompletionModel> Vy<M> {
@@ -23,7 +22,6 @@ impl<M: CompletionModel> Vy<M> {
         model_id: String,
         api_key: String,
         memory_model_id: String,
-        memory_preamble: String,
     ) -> Self {
         Self {
             agent,
@@ -31,7 +29,6 @@ impl<M: CompletionModel> Vy<M> {
             model_id,
             api_key,
             memory_model_id,
-            memory_preamble,
         }
     }
 
@@ -250,7 +247,6 @@ impl<M: CompletionModel> Vy<M> {
                 conversation_id.clone(),
                 &self.api_key,
                 &self.memory_model_id,
-                &self.memory_preamble,
             )
             .await
         {

@@ -81,14 +81,10 @@ pub struct Prefs {
     pub google_search_engine_id: String,
     #[serde(default = "default_model_id")]
     pub model_id: String,
-    #[serde(default = "default_preamble")]
-    pub preamble: String,
     #[serde(default = "default_memory_model_id")]
     pub memory_model_id: String,
     #[serde(default = "default_memory_similarity_model_id")]
     pub memory_similarity_model_id: String,
-    #[serde(default = "default_memory_preamble")]
-    pub memory_preamble: String,
 }
 
 pub fn load_prefs(path: &Path) -> Result<Prefs> {

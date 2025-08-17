@@ -101,10 +101,7 @@ Search Engine ID: [user enters ID]
 5. **google_api_key** (required, hidden input)
 6. **google_search_engine_id** (required)
 
-Fields not prompted (use sensible defaults):
-
-- **preamble** - Too long for interactive input
-- **memory_preamble** - Too long for interactive input
+All fields are prompted during interactive configuration.
 
 ## Error Handling & Validation
 
@@ -141,12 +138,14 @@ cargo run -- config list
 ## API Key Setup Instructions
 
 ### OpenAI API Key
+
 1. Go to https://platform.openai.com/api-keys
 2. Sign in to your OpenAI account
 3. Click "Create new secret key"
 4. Copy the key and paste it during config init
 
 ### Google API Key
+
 1. Go to https://console.developers.google.com/
 2. Create a new project or select existing one
 3. Enable the Custom Search API
@@ -154,6 +153,7 @@ cargo run -- config list
 5. Copy the key and paste it during config init
 
 ### Google Search Engine ID
+
 1. Go to https://cse.google.com/
 2. Click "Add" to create a new search engine
 3. Configure your search engine settings
