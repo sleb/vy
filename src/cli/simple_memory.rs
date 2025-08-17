@@ -59,49 +59,32 @@ impl SimpleMemoryCommand {
             SimpleMemoryCommand::Add { fact } => {
                 // Load API key for LLM-based extraction
                 // Load preferences for API key and memory settings
-                let prefs = std::env::var("OPENAI_API_KEY")
-                    .map(|key| {
-                        // Use environment API key with default memory settings
-                        crate::prefs::Prefs {
-                            llm_api_key: key,
-                            google_api_key: String::new(),
-                            google_search_engine_id: String::new(),
-                            model_id: "gpt-3.5-turbo".to_string(),
-                            preamble: crate::prefs::default_preamble(),
-                            memory_model_id: "gpt-4".to_string(),
-                            memory_similarity_model_id: "gpt-3.5-turbo".to_string(),
-                            memory_preamble: crate::prefs::default_memory_preamble(),
-                        }
-                    })
-                    .or_else(|_| {
-                        // Try to load from config file
-                        if let Some(proj_dirs) = directories::ProjectDirs::from("vy", "", "") {
-                            let config_path = proj_dirs.config_dir().join("prefs.toml");
-                            crate::prefs::load_prefs(&config_path)
-                        } else {
-                            Err(anyhow::anyhow!("No config directory"))
-                        }
-                    });
+                let prefs = if let Some(proj_dirs) = directories::ProjectDirs::from("vy", "", "") {
+                    let config_path = proj_dirs.config_dir().join("prefs.toml");
+                    crate::prefs::load_prefs(&config_path)
+                        .map_err(|_| anyhow::anyhow!(
+                            "Configuration file not found. Please run 'vy config init' to set up all required configuration"
+                        ))?
+                } else {
+                    anyhow::bail!("No config directory available")
+                };
 
-                match prefs {
-                    Ok(prefs) if !prefs.llm_api_key.is_empty() => {
-                        memory
-                            .learn_from_input(
-                                &fact,
-                                "manual".to_string(),
-                                &prefs.llm_api_key,
-                                &prefs.memory_model_id,
-                                &prefs.memory_preamble,
-                            )
-                            .await?;
-                        println!("✅ Added fact to memory: {fact}");
-                    }
-                    _ => {
-                        println!(
-                            "❌ No OpenAI API key found. Set OPENAI_API_KEY environment variable or run 'vy config set llm_api_key'"
-                        );
-                        return Ok(());
-                    }
+                if !prefs.llm_api_key.is_empty() {
+                    memory
+                        .learn_from_input(
+                            &fact,
+                            "manual".to_string(),
+                            &prefs.llm_api_key,
+                            &prefs.memory_model_id,
+                            &prefs.memory_preamble,
+                        )
+                        .await?;
+                    println!("✅ Added fact to memory: {fact}");
+                } else {
+                    println!(
+                        "❌ No OpenAI API key found. Please run 'vy config init' to set up configuration"
+                    );
+                    return Ok(());
                 }
             }
             SimpleMemoryCommand::List => {
@@ -202,47 +185,28 @@ impl SimpleMemoryCommand {
                 }
 
                 // Load preferences for API key and memory settings
-                let prefs = std::env::var("OPENAI_API_KEY")
-                    .map(|key| {
-                        // Use environment API key with default memory settings
-                        crate::prefs::Prefs {
-                            llm_api_key: key,
-                            google_api_key: String::new(),
-                            google_search_engine_id: String::new(),
-                            model_id: "gpt-3.5-turbo".to_string(),
-                            preamble: crate::prefs::default_preamble(),
-                            memory_model_id: "gpt-4".to_string(),
-                            memory_similarity_model_id: "gpt-3.5-turbo".to_string(),
-                            memory_preamble: crate::prefs::default_memory_preamble(),
-                        }
-                    })
-                    .or_else(|_| {
-                        // Try to load from config file
-                        if let Some(proj_dirs) = directories::ProjectDirs::from("vy", "", "") {
-                            let config_path = proj_dirs.config_dir().join("prefs.toml");
-                            crate::prefs::load_prefs(&config_path)
-                        } else {
-                            Err(anyhow::anyhow!("No config directory"))
-                        }
-                    });
+                let prefs = if let Some(proj_dirs) = directories::ProjectDirs::from("vy", "", "") {
+                    let config_path = proj_dirs.config_dir().join("prefs.toml");
+                    crate::prefs::load_prefs(&config_path)
+                        .map_err(|_| anyhow::anyhow!(
+                            "Configuration file not found. Please run 'vy config init' to set up all required configuration"
+                        ))?
+                } else {
+                    anyhow::bail!("No config directory available")
+                };
 
-                match prefs {
-                    Ok(prefs) if !prefs.llm_api_key.is_empty() => {
-                        println!(
-                            "🧹 Consolidating {} memory entries with LLM analysis...",
-                            entries_before
-                        );
-                        memory
-                            .vacuum(&prefs.llm_api_key, &prefs.memory_similarity_model_id)
-                            .await?;
-                    }
-                    _ => {
-                        eprintln!("❌ Error: No API key found for LLM analysis.");
-                        eprintln!("💡 Please set your API key:");
-                        eprintln!("   • Environment variable: export OPENAI_API_KEY=your_key");
-                        eprintln!("   • Or configure it: vy config set llm_api_key");
-                        return Ok(());
-                    }
+                if !prefs.llm_api_key.is_empty() {
+                    println!(
+                        "🧹 Consolidating {} memory entries with LLM analysis...",
+                        entries_before
+                    );
+                    memory
+                        .vacuum(&prefs.llm_api_key, &prefs.memory_similarity_model_id)
+                        .await?;
+                } else {
+                    eprintln!("❌ Error: No API key found for LLM analysis.");
+                    eprintln!("💡 Please run 'vy config init' to set up configuration");
+                    return Ok(());
                 }
 
                 memory.save().await?;

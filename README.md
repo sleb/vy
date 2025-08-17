@@ -38,7 +38,15 @@ Vy is a command-line AI assistant built in Rust that combines the power of large
 
 ### Initial Setup
 
-1. **Configure your API key**:
+1. **Interactive setup (recommended)**:
+
+   ```bash
+   vy config init
+   ```
+
+   This will guide you through setting up all required configuration including API keys, model preferences, and Google search.
+
+2. **Manual configuration**:
 
    ```bash
    vy config set llm_api_key
@@ -46,20 +54,20 @@ Vy is a command-line AI assistant built in Rust that combines the power of large
 
    Enter your OpenAI API key when prompted.
 
-2. **Start chatting**:
+3. **Start chatting**:
 
    ```bash
    vy chat
    ```
 
-3. **Start chatting with automatic memory**:
+4. **Start chatting with automatic memory**:
 
    ```bash
    vy chat
    # Vy will automatically remember important information when you exit
    ```
 
-4. **Explore manual memory features**:
+5. **Explore manual memory features**:
    ```bash
    vy remember add "I love hiking in the mountains"
    vy remember list
@@ -84,18 +92,21 @@ vy chat                    # Start interactive chat session
 ### Configuration
 
 ```bash
-vy config set <key>        # Set a configuration value
-vy config get <key>        # Get a configuration value
-vy config list             # List all configuration values
-vy config delete <key>     # Delete a configuration value
+vy config init            # Interactive setup (recommended for first-time users)
+vy config set <key>       # Set a configuration value
+vy config get <key>       # Get a configuration value
+vy config list            # List all configuration values
+vy config --edit          # Edit config file in your default editor
 ```
 
 **Available Config Keys**:
 
-- `llm_api_key` - OpenAI API key
-- `llm_model` - Model to use (default: gpt-4)
-- `google_search_api_key` - Google Custom Search API key
-- `google_search_engine_id` - Google Custom Search Engine ID
+- `llm_api_key` - OpenAI API key (required)
+- `model_id` - Model to use (default: gpt-3.5-turbo)
+- `google_api_key` - Google Custom Search API key (required)
+- `google_search_engine_id` - Google Custom Search Engine ID (required)
+
+**Note**: All configuration keys are required for Vy to function properly.
 
 ### Memory Management
 
@@ -173,12 +184,12 @@ vy remember list
 
 Vy stores configuration in `~/.config/vy/prefs.toml` (or equivalent on your platform).
 
-Example configuration:
+Example configuration (all fields required):
 
 ```toml
 llm_api_key = "sk-..."
-llm_model = "gpt-4"
-google_search_api_key = "your-google-api-key"
+model_id = "gpt-4"
+google_api_key = "your-google-api-key"
 google_search_engine_id = "your-search-engine-id"
 ```
 

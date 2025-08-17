@@ -180,21 +180,10 @@ impl Cli {
     }
 
     async fn run_config_edit(&self, prefs_path: &Path) -> Result<()> {
-        // Ensure prefs file exists, create with defaults if it doesn't
+        // Ensure prefs file exists
         if !prefs_path.exists() {
-            let default_prefs = Prefs {
-                llm_api_key: String::new(),
-                google_api_key: String::new(),
-                google_search_engine_id: String::new(),
-                model_id: "gpt-3.5-turbo".to_string(),
-                preamble: prefs::default_preamble(),
-                memory_model_id: "gpt-4".to_string(),
-                memory_similarity_model_id: "gpt-3.5-turbo".to_string(),
-                memory_preamble: crate::prefs::default_memory_preamble(),
-            };
-            prefs::save_prefs(&default_prefs, prefs_path)?;
-            println!(
-                "✅ Created default preferences file at: {}",
+            anyhow::bail!(
+                "Configuration file not found at: {}\n💡 Run 'vy config init' to set up all required configuration first",
                 prefs_path.display()
             );
         }
