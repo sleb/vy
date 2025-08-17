@@ -113,7 +113,16 @@ async fn load_memory_enhanced_preamble(base_preamble: &str) -> Result<String> {
     }
 
     let memory_context = format!(
-        "\n\nIMPORTANT USER CONTEXT (from previous conversations):\n{}",
+        r#"
+
+IMPORTANT USER CONTEXT (from previous conversations):
+{}
+
+RESPONSE GUIDELINES:
+- When asked about tasks/todos, provide clean bulleted lists
+- Be aware of temporal context - don't mention outdated appointments
+- For "what's on my todo list" queries, format as actionable bullet points
+- Prioritize recent and current information over old entries"#,
         relevant_memories
             .iter()
             .map(|fact| format!("• {}", fact))
@@ -129,7 +138,7 @@ async fn load_memory_enhanced_preamble(base_preamble: &str) -> Result<String> {
     Ok(format!("{}{}", base_preamble, memory_context))
 }
 
-/// Extract relevant context using LLM analysis of existing memories
+/// Extract relevant context using LLM analysis with temporal and relevance awareness
 async fn extract_relevant_context(
     memory: &SimpleMemory,
     prefs: &crate::prefs::Prefs,
@@ -138,42 +147,59 @@ async fn extract_relevant_context(
 
     let client = openai::Client::builder(&prefs.llm_api_key).build()?;
 
-    // Get all memories for analysis
-    let all_memories: Vec<String> = memory
-        .get_all_entries()
-        .iter()
-        .map(|entry| entry.fact.clone())
-        .collect();
+    // Get all memories with timestamps for analysis
+    let all_entries = memory.get_all_entries();
 
-    if all_memories.is_empty() {
+    if all_entries.is_empty() {
         return Ok(Vec::new());
     }
 
-    // Create a prompt for the LLM to analyze and select relevant memories
-    let memories_text = all_memories
+    let today = chrono::Utc::now().date_naive();
+
+    // Create enriched memory text with temporal context
+    let memories_text = all_entries
         .iter()
         .enumerate()
-        .map(|(i, fact)| format!("{}. {}", i + 1, fact))
+        .map(|(i, entry)| {
+            let entry_date = entry.timestamp.date_naive();
+            let days_ago = (today - entry_date).num_days();
+            let temporal_note = if days_ago == 0 {
+                " [TODAY]"
+            } else if days_ago == 1 {
+                " [YESTERDAY]"
+            } else if days_ago <= 7 {
+                &format!(" [{}D AGO]", days_ago)
+            } else {
+                " [OLD]"
+            };
+            format!("{}. {}{}", i + 1, entry.fact, temporal_note)
+        })
         .collect::<Vec<_>>()
         .join("\n");
 
     let analysis_prompt = format!(
-        r#"You are about to start a conversation with a user. Below are facts from previous conversations.
+        r#"You are about to start a conversation with a user. Below are facts from previous conversations with temporal indicators.
 
-Select the most relevant and important facts that would help you provide personalized, contextual responses. Focus on:
-- Core identity information (name, role, location)
-- Current important events or appointments
+Select the most relevant and current facts for providing personalized responses. Prioritize:
+- Current/recent information over old entries
+- Core identity (name, role, location) - always relevant
+- Active tasks, appointments, and commitments
 - Family/personal relationships
-- Work or professional context
-- Recent significant topics or activities
+- Professional context
+- Recent preferences and activities
 
-Available facts:
+TEMPORAL GUIDANCE:
+- [TODAY]/[YESTERDAY] entries are highly relevant
+- [OLD] entries (>7 days) should only be selected if they contain core identity info
+- Avoid outdated appointments, meetings, or time-sensitive tasks
+
+Available facts with temporal context:
 {}
 
 Return ONLY a JSON array of the most relevant fact numbers (1-{}), like: [1, 3, 7, 12]
-Limit to maximum 8 facts to avoid overwhelming the context."#,
+Limit to maximum 8 facts, prioritizing recent and permanent information."#,
         memories_text,
-        all_memories.len()
+        all_entries.len()
     );
 
     let agent = client
@@ -192,17 +218,33 @@ Limit to maximum 8 facts to avoid overwhelming the context."#,
 
     let selected_indices: Vec<usize> =
         serde_json::from_str(response_cleaned).unwrap_or_else(|_| {
-            log::debug!("Failed to parse LLM response, using fallback selection");
-            // If parsing fails, select the first few facts as fallback
-            (1..=all_memories.len().min(8)).collect()
+            log::debug!("Failed to parse LLM response, using temporal fallback selection");
+            // Fallback: prioritize recent entries and core identity
+            all_entries
+                .iter()
+                .enumerate()
+                .filter_map(|(idx, entry)| {
+                    let entry_date = entry.timestamp.date_naive();
+                    let days_ago = (today - entry_date).num_days();
+                    let is_core_identity = entry.fact.to_lowercase().contains("scott")
+                        || entry.fact.to_lowercase().contains("amazon")
+                        || entry.fact.to_lowercase().contains("live");
+                    if days_ago <= 2 || is_core_identity {
+                        Some(idx + 1)
+                    } else {
+                        None
+                    }
+                })
+                .take(8)
+                .collect()
         });
 
     // Convert indices to actual facts (adjusting for 1-based indexing)
     let relevant_memories = selected_indices
         .iter()
         .filter_map(|&idx| {
-            if idx > 0 && idx <= all_memories.len() {
-                Some(all_memories[idx - 1].clone())
+            if idx > 0 && idx <= all_entries.len() {
+                Some(all_entries[idx - 1].fact.clone())
             } else {
                 None
             }
