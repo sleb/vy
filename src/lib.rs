@@ -3,7 +3,6 @@ use rig::agent::Agent;
 use rig::completion::{Message, Prompt, request::CompletionModel};
 use std::io::{self, Write};
 
-pub mod memory;
 pub mod simple_memory;
 pub mod tools;
 
