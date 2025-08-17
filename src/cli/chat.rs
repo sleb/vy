@@ -59,7 +59,7 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
         prefs.llm_api_key.clone(),
         prefs.memory_model_id.clone(),
     );
-    vy.chat().await.context("Failed to start Vy chatbot")?;
+    vy.chat_tui().await.context("Failed to start Vy chatbot")?;
 
     Ok(())
 }
