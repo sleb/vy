@@ -100,6 +100,257 @@ impl<M: CompletionModel> Vy<M> {
         Ok(())
     }
 
+    pub async fn chat_tui(mut self) -> Result<()> {
+        use crossterm::{
+            event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers},
+            execute,
+            terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+        };
+        use ratatui::{
+            backend::CrosstermBackend,
+            layout::{Constraint, Direction, Layout, Rect},
+            style::{Color, Modifier, Style},
+            text::{Line, Span, Text},
+            widgets::{Block, Borders, Clear, Paragraph, Wrap},
+            Terminal,
+        };
+        use std::time::Duration;
+
+        // Terminal setup
+        enable_raw_mode()?;
+        let mut stdout = std::io::stdout();
+        if let Err(e) = execute!(stdout, EnterAlternateScreen, event::EnableMouseCapture) {
+            // Best-effort cleanup
+            let _ = disable_raw_mode();
+            return Err(e.into());
+        }
+        let backend = CrosstermBackend::new(stdout);
+        let mut terminal = Terminal::new(backend)?;
+        terminal.clear()?;
+
+        // UI state
+        let mut input = String::new();
+        let mut chat_log: Vec<String> = Vec::new();
+        let mut scroll: i32 = 0;
+        let mut show_help = false;
+
+        chat_log.push(format!(
+            "🤖 Vy - {} | Press Enter to send, ? for help, q to quit",
+            self.model_id
+        ));
+
+        // Main loop
+        'outer: loop {
+            let draw_result: Result<(), anyhow::Error> = (|| {
+                terminal.draw(|f| {
+                    let size = f.size();
+
+                    let chunks = Layout::default()
+                        .direction(Direction::Vertical)
+                        .constraints([
+                            Constraint::Length(1), // status
+                            Constraint::Min(1),     // chat
+                            Constraint::Length(3), // input
+                        ])
+                        .split(size);
+
+                    // Status bar
+                    let status = Paragraph::new(Line::from(vec![
+                        Span::styled(
+                            format!(" Vy - {} ", self.model_id),
+                            Style::default().fg(Color::Black).bg(Color::Cyan),
+                        ),
+                        Span::raw("  ⌨  Enter: Send   ↑/↓: Scroll   PgUp/PgDn: Fast scroll   q: Quit"),
+                    ]))
+                    .style(Style::default())
+                    .block(Block::default().borders(Borders::BOTTOM));
+                    f.render_widget(status, chunks[0]);
+
+                    // Chat area
+                    let chat_text = Text::from(chat_log.join("\n"));
+                    let mut chat = Paragraph::new(chat_text)
+                        .wrap(Wrap { trim: false })
+                        .block(Block::default().title("Chat").borders(Borders::ALL));
+
+                    // Calculate max vertical scroll based on content height rough estimate
+                    // We do a simple line-based scroll; ratatui will wrap long lines visually
+                    let max_scroll: i32 = 0.max((chat_log.len() as i32) - (chunks[1].height as i32 - 2));
+                    let scroll_top = scroll.clamp(0, max_scroll) as u16;
+                    chat = chat.scroll((scroll_top, 0));
+                    f.render_widget(chat, chunks[1]);
+
+                    // Input area
+                    let input_block = Block::default().title("Input").borders(Borders::ALL);
+                    let input_paragraph = Paragraph::new(input.as_str())
+                        .style(Style::default())
+                        .block(input_block.clone());
+                    f.render_widget(input_paragraph, chunks[2]);
+                    // Put cursor inside the input box
+                    let cursor_x = chunks[2].x + 1 + input.len() as u16;
+                    let cursor_y = chunks[2].y + 1;
+                    f.set_cursor(cursor_x.min(chunks[2].right() - 1), cursor_y);
+
+                    if show_help {
+                        let help_area = centered_rect(70, 60, size);
+                        let help = Paragraph::new(Text::from(
+                            "Controls:\n\n  Enter: Send message\n  q: Quit (when input empty)\n  Esc: Clear input / Close help\n  ↑/↓: Scroll chat\n  PgUp/PgDn: Faster scroll\n  ?: Toggle help\n\nCommands:\n  help      Show this help\n  history   Show message count\n  clear     Clear chat pane\n  exit|quit End session",
+                        ))
+                        .block(Block::default().title("Help").borders(Borders::ALL))
+                        .wrap(Wrap { trim: true });
+                        f.render_widget(Clear, help_area);
+                        f.render_widget(help, help_area);
+                    }
+                })?;
+                Ok(())
+            })();
+
+            if draw_result.is_err() {
+                break 'outer;
+            }
+
+            // Input handling
+            if event::poll(Duration::from_millis(100))? {
+                let evt = event::read()?;
+                match evt {
+                    Event::Key(KeyEvent { code, modifiers, kind, .. }) if kind == KeyEventKind::Press => {
+                        match code {
+                            KeyCode::Char('?') => {
+                                show_help = !show_help;
+                            }
+                            KeyCode::Esc => {
+                                if show_help {
+                                    show_help = false;
+                                } else if !input.is_empty() {
+                                    input.clear();
+                                }
+                            }
+                            KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => {
+                                break 'outer;
+                            }
+                            KeyCode::Char('q') if input.is_empty() && !show_help => {
+                                break 'outer;
+                            }
+                            KeyCode::Char(ch) => {
+                                input.push(ch);
+                            }
+                            KeyCode::Backspace => {
+                                input.pop();
+                            }
+                            KeyCode::Enter => {
+                                let trimmed = input.trim().to_string();
+                                if !trimmed.is_empty() {
+                                    // Commands
+                                    let lower = trimmed.to_lowercase();
+                                    if matches!(lower.as_str(), "exit" | "quit" | "bye" | "q") {
+                                        break 'outer;
+                                    } else if lower == "clear" {
+                                        chat_log.clear();
+                                        chat_log.push(format!(
+                                            "🤖 Vy - {} | Press Enter to send, ? for help, q to quit",
+                                            self.model_id
+                                        ));
+                                        input.clear();
+                                        continue;
+                                    } else if lower == "help" {
+                                        show_help = true;
+                                        input.clear();
+                                        continue;
+                                    } else if lower == "history" {
+                                        chat_log.push(format!(
+                                            "📝 Conversation History: {} messages stored",
+                                            self.conversation_history.len()
+                                        ));
+                                        input.clear();
+                                        continue;
+                                    }
+
+                                    // Send to agent
+                                    chat_log.push(format!("💬 You: {}", trimmed));
+                                    // Maintain history for memory analysis
+                                    self.conversation_history.push(Message::user(&trimmed));
+
+                                    // Blocking call to agent (keeps it simple for now)
+                                    match self
+                                        .agent
+                                        .prompt(&trimmed)
+                                        .multi_turn(5)
+                                        .with_history(&mut self.conversation_history)
+                                        .await
+                                    {
+                                        Ok(response) => {
+                                            for line in response.lines() {
+                                                chat_log.push(format!("🤖 Vy: {}", line));
+                                            }
+                                        }
+                                        Err(e) => {
+                                            chat_log.push(format!("❌ Error: {}", Self::format_error(&e)));
+                                        }
+                                    }
+
+                                    input.clear();
+
+                                    // Auto-scroll to bottom after new message
+                                    scroll = 0;
+                                }
+                            }
+                            KeyCode::Up => {
+                                scroll += 1;
+                            }
+                            KeyCode::Down => {
+                                scroll -= 1;
+                                if scroll < 0 { scroll = 0; }
+                            }
+                            KeyCode::PageUp => {
+                                scroll += 5;
+                            }
+                            KeyCode::PageDown => {
+                                scroll -= 5;
+                                if scroll < 0 { scroll = 0; }
+                            }
+                            _ => {}
+                        }
+                    }
+                    Event::Resize(_, _) => {}
+                    _ => {}
+                }
+            }
+        }
+
+        // Cleanup terminal
+        let _ = disable_raw_mode();
+        let _ = execute!(terminal.backend_mut(), LeaveAlternateScreen, event::DisableMouseCapture);
+        let _ = terminal.show_cursor();
+
+        // Analyze conversation for memories before saying goodbye
+        self.analyze_conversation_memories().await?;
+        self.print_goodbye();
+
+        Ok(())
+
+        // Helper: centered rect for popups
+        fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+            let popup_layout = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([
+                    Constraint::Percentage((100 - percent_y) / 2),
+                    Constraint::Percentage(percent_y),
+                    Constraint::Percentage((100 - percent_y) / 2),
+                ])
+                .split(r);
+
+            let horizontal = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([
+                    Constraint::Percentage((100 - percent_x) / 2),
+                    Constraint::Percentage(percent_x),
+                    Constraint::Percentage((100 - percent_x) / 2),
+                ])
+                .split(popup_layout[1]);
+
+            horizontal[1]
+        }
+    }
+
     fn print_welcome(&self) {
         println!("🤖 Vy - {} | Type 'help' for commands", self.model_id);
         if self.model_id == "gpt-5-mini" {
@@ -278,8 +529,7 @@ impl<M: CompletionModel> Vy<M> {
 
         // Make common errors more user-friendly
         if error_str.contains("invalid_api_key") {
-            "🔑 Invalid API key detected!\n   Run: vy config set llm_api_key\n   Then paste your OpenAI API key when prompted."
-                .to_string()
+            "🔑 Invalid API key detected!\n   Run: vy config set llm_api_key\n   Then paste your OpenAI API key when prompted.".to_string()
         } else if error_str.contains("insufficient_quota") {
             "💳 API quota exceeded. Please check your OpenAI billing and usage.".to_string()
         } else if error_str.contains("rate_limit_exceeded") {
