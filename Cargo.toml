@@ -31,6 +31,9 @@ rpassword = "7.3"
 ratatui = "0.28"
 crossterm = { version = "0.28", features = ["event-stream"] }
 
+# Vector database dependencies
+qdrant-client = "1.11"
+
 # Dev dependencies
 tempfile = "3.8"
 

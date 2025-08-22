@@ -15,6 +15,7 @@ use rig::completion::{Message, Prompt, request::CompletionModel};
 pub mod config;
 pub mod memory;
 pub mod tools;
+pub mod vector_memory;
 
 use memory::{Memory, default_memory_file};
 
@@ -221,12 +222,52 @@ pub fn format_error(e: &dyn std::error::Error) -> String {
 pub mod builder {
     use super::*;
     use crate::config::VyConfig;
+    use crate::vector_memory::{VectorMemory, VectorMemoryConfig};
     use rig::client::completion::CompletionClientDyn;
     use rig::providers::{anthropic::Client as AnthropicClient, openai::Client as OpenAIClient};
 
     /// Build a Vy instance with OpenAI
     pub async fn build_openai_vy(config: &VyConfig) -> Result<VyCore<impl CompletionModel>> {
         let client = OpenAIClient::builder(&config.llm_api_key).build()?;
+
+        let mut agent_builder = CompletionClientDyn::agent(&client, &config.llm_model_id)
+            .preamble(&config.system_prompt);
+
+        // Add tools based on model compatibility
+        if config.llm_model_id != "gpt-5-mini" {
+            agent_builder = agent_builder.tool(crate::tools::google_search(
+                config.google_api_key.clone(),
+                config.google_search_engine_id.clone(),
+            ));
+        }
+
+        let agent = agent_builder
+            .tool(crate::tools::simple_memory_tool())
+            .tool(crate::tools::memory_store_tool())
+            .tool(crate::tools::memory_remove_tool())
+            .tool(crate::tools::smart_memory_update_tool())
+            .tool(crate::tools::nutrition_analysis_tool(
+                config.llm_api_key.clone(),
+            ))
+            .build();
+
+        Ok(VyCore::new(
+            agent,
+            config.llm_model_id.clone(),
+            config.llm_api_key.clone(),
+            config.memory_model_id.clone(),
+        ))
+    }
+
+    /// Build a Vy instance with OpenAI and vector memory
+    pub async fn build_openai_vy_with_vector_memory(
+        config: &VyConfig,
+        vector_config: VectorMemoryConfig,
+    ) -> Result<VyCore<impl CompletionModel>> {
+        let client = OpenAIClient::builder(&config.llm_api_key).build()?;
+
+        // Initialize vector memory
+        let _vector_memory = VectorMemory::new(vector_config).await?;
 
         let mut agent_builder = CompletionClientDyn::agent(&client, &config.llm_model_id)
             .preamble(&config.system_prompt);
@@ -282,5 +323,36 @@ pub mod builder {
             config.llm_api_key.clone(),
             config.memory_model_id.clone(),
         ))
+    }
+
+    /// Example function showing how to use vector memory directly
+    pub async fn example_vector_memory_usage() -> Result<()> {
+        let vector_config = VectorMemoryConfig {
+            qdrant_url: "http://localhost:6334".to_string(),
+            qdrant_api_key: None, // For local instance
+            collection_name: "vy_memories".to_string(),
+            openai_api_key: std::env::var("OPENAI_API_KEY").unwrap_or_default(),
+            embedding_model: "text-embedding-3-small".to_string(),
+        };
+
+        let vector_memory = VectorMemory::new(vector_config).await?;
+
+        // Example: Store a memory
+        let memory_entry = crate::memory::MemoryEntry::new(
+            "User works as a software engineer at Google".to_string(),
+            "conversation_example".to_string(),
+        );
+        vector_memory.store_memory(&memory_entry).await?;
+
+        // Example: Search for memories
+        let results = vector_memory
+            .search_memories("software engineer job", 5)
+            .await?;
+
+        for memory in results {
+            println!("Found memory: {}", memory.fact);
+        }
+
+        Ok(())
     }
 }
