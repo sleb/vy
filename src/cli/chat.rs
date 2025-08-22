@@ -32,7 +32,7 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
         .context("Failed to create LLM client")?;
 
     // Load memory context and enhance preamble
-    let enhanced_preamble = load_memory_enhanced_preamble().await?;
+    let preamble = load_memory_enhanced_preamble().await?;
 
     // Create tools
     let google_search_tool = GoogleSearchTool::new(
@@ -47,7 +47,7 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
 
     let agent = client
         .agent(&prefs.model_id)
-        .preamble(&enhanced_preamble)
+        .preamble(&preamble)
         .tool(google_search_tool)
         .tool(memory_tool)
         .tool(memory_store_tool)
