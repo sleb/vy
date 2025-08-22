@@ -1,0 +1,29 @@
+[package]
+name = "vy-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Command-line interface for the Vy AI chatbot"
+
+[dependencies]
+vy-core = { path = "../vy-core" }
+vy-tui = { path = "../vy-tui" }
+
+anyhow.workspace = true
+tokio.workspace = true
+log.workspace = true
+env_logger.workspace = true
+
+# CLI dependencies
+clap.workspace = true
+rpassword.workspace = true
+
+# Configuration
+directories.workspace = true
+
+# LLM providers
+rig-core.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

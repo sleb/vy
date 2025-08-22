@@ -2484,24 +2484,67 @@ name = "vy"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
- "chrono",
  "clap",
- "config",
- "crossterm",
+ "env_logger",
+ "log",
+ "tempfile",
+ "tokio",
+ "vy-cli",
+ "vy-core",
+ "vy-tui",
+]
+
+[[package]]
+name = "vy-cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
  "directories",
  "env_logger",
  "log",
- "ratatui",
- "reqwest",
  "rig-core",
  "rpassword",
+ "tempfile",
+ "tokio",
+ "vy-core",
+ "vy-tui",
+]
+
+[[package]]
+name = "vy-core"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "chrono",
+ "config",
+ "directories",
+ "env_logger",
+ "log",
+ "reqwest",
+ "rig-core",
  "serde",
  "serde_json",
  "tempfile",
  "tokio",
  "toml",
  "urlencoding",
+]
+
+[[package]]
+name = "vy-tui"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "crossterm",
+ "env_logger",
+ "log",
+ "ratatui",
+ "rig-core",
+ "tokio",
+ "vy-core",
 ]
 
 [[package]]

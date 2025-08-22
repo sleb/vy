@@ -1,427 +1,256 @@
-# Vy 🤖
+# Vy - AI-Powered Chatbot with Multiple Interfaces
 
-**Your AI Assistant with Memory**
+Vy is a sophisticated AI chatbot built in Rust that provides multiple interface options including CLI, TUI, and (soon) mobile and web interfaces. It features persistent memory, real-time Google search, and advanced conversation capabilities.
 
-Vy is a command-line AI assistant built in Rust that combines the power of large language models with persistent memory capabilities. Unlike traditional chatbots that forget everything between sessions, Vy can remember facts about you, your preferences, and past conversations.
+## 🏗️ Architecture
 
-## ✨ Features
+This project uses a modular workspace architecture with separate crates for different concerns:
 
-- **💬 Interactive Chat**: Natural conversation with AI models (OpenAI GPT) in CLI or TUI mode
-- **🧠 Persistent Memory**: Remembers facts, preferences, and relationships across sessions
-- **🖥️ Modern TUI Interface**: Beautiful terminal UI with real-time chat and help system
-- **🔍 Smart Search**: Find relevant memories using semantic search
-- **🔧 Configuration Management**: Easy setup and customization
-- **🌐 Google Search Integration**: Access real-time information (model-dependent)
-- **📊 Memory Analytics**: Track and analyze your stored memories
-- **🍽️ Nutrition Analysis**: Analyze meal photos to identify ingredients and portions
-- **🚀 Fast & Efficient**: Built in Rust for performance
+```
+vy/
+├── vy-core/           # Core chatbot logic and functionality
+├── vy-cli/            # Command-line interface
+├── vy-tui/            # Terminal user interface (basic implementation)
+├── vy/                # Main binary that ties everything together
+└── Cargo.toml         # Workspace configuration
+```
 
-## 🚀 Quick Start
+### Crate Responsibilities
 
-### Installation
+- **`vy-core`**: Contains the core `VyCore` struct, memory system, tools (Google search, nutrition analysis), and configuration management. This crate is interface-agnostic and can be used by any frontend.
 
-1. **Clone the repository**:
+- **`vy-cli`**: Provides the command-line interface, configuration management commands, and memory management utilities.
 
-   ```bash
-   git clone https://github.com/yourusername/vy.git
-   cd vy
-   ```
+- **`vy-tui`**: Terminal User Interface (currently minimal - shows placeholder message).
 
-2. **Build the project**:
+- **`vy`**: Main binary crate that coordinates between different interfaces and provides the unified `vy` command.
 
-   ```bash
-   cargo build --release
-   ```
+## 🚀 Features
 
-3. **Install globally** (optional):
-   ```bash
-   cargo install --path .
-   ```
+- **Multiple Interface Options**: CLI and TUI modes (with more coming)
+- **Persistent Memory**: Automatically learns and remembers information from conversations
+- **Real-time Search**: Google search integration for current information
+- **Nutrition Analysis**: Analyze meal photos for ingredient breakdown
+- **Configurable Models**: Support for various OpenAI models
+- **Error Handling**: User-friendly error messages and recovery
 
-### Initial Setup
+## 📦 Installation
 
-1. **Interactive setup (recommended)**:
+### From Source
+
+```bash
+git clone <repository-url>
+cd vy
+cargo build --release
+```
+
+The binary will be available at `target/release/vy`.
+
+## 🔧 Setup
+
+1. **Initialize Configuration**:
 
    ```bash
    vy config init
    ```
 
-   This will guide you through setting up all required configuration including API keys, model preferences, and Google search.
+   This will prompt you for:
+   - OpenAI API key
+   - Google API key
+   - Google Custom Search Engine ID
+   - Model preferences
 
-2. **Manual configuration**:
-
+2. **Verify Configuration**:
    ```bash
-   vy config set llm_api_key
+   vy config list
    ```
 
-   Enter your OpenAI API key when prompted.
+## 💬 Usage
 
-3. **Start chatting**:
+### Chat Modes
 
-   ```bash
-   vy chat          # CLI mode (classic)
-   vy chat --tui    # TUI mode (modern terminal interface)
-   ```
-
-4. **Start chatting with automatic memory**:
-
-   ```bash
-   vy chat
-   # Vy will automatically remember important information when you exit
-   ```
-
-5. **Explore manual memory features**:
-   ```bash
-   vy remember add "I love hiking in the mountains"
-   vy remember list
-   vy remember search "hiking"
-   ```
-
-## 📋 Commands
-
-### Chat
+**CLI Mode (Default)**:
 
 ```bash
-vy chat                    # Start chat using configured default mode
-vy chat --tui              # Force TUI mode (overrides config)
-vy chat --cli              # Force CLI mode (overrides config)
+vy chat
+# or explicitly
+vy chat --cli
 ```
 
-#### TUI Mode Features
-
-The Terminal User Interface (TUI) mode provides a modern, interactive experience:
-
-- **Real-time Interface**: Live chat display with message history
-- **Keyboard Navigation**:
-  - `Enter` - Send message
-  - `↑/↓` - Scroll through messages
-  - `PgUp/PgDn` - Page through message history
-  - `F1` or `?` - Show help screen
-  - `Esc` - Exit application
-- **Visual Feedback**: Color-coded messages and status indicators
-- **Message Types**:
-  - Green - Your messages
-  - Blue - Vy's responses
-  - Red - Error messages
-  - Yellow - System messages
-- **Help System**: Built-in help accessible with F1
-- **Auto-scrolling**: Automatically follows new messages
-
-**Chat Commands** (available during conversation):
-
-- `help` - Show available commands
-- `history` - Show conversation history
-- `clear` - Clear screen and conversation history
-- `exit`, `quit`, `bye`, `q` - End conversation
-
-### Configuration
+**TUI Mode**:
 
 ```bash
-vy config init            # Interactive setup (recommended for first-time users)
-vy config set <key>       # Set a configuration value
-vy config get <key>       # Get a configuration value
-vy config list            # List all configuration values
-vy config --edit          # Edit config file in your default editor
+vy chat --tui
 ```
 
-**Setting Your Default Chat Mode**:
+### Configuration Management
 
 ```bash
-vy config set default_chat_mode cli    # Use CLI mode by default
-vy config set default_chat_mode tui    # Use TUI mode by default
+# List all settings
+vy config list
+
+# Get a specific setting
+vy config get llm_model_id
+
+# Set a setting
+vy config set llm_model_id gpt-4o-mini
+
+# Edit config file directly
+vy config --edit
 ```
-
-**Available Config Keys**:
-
-- `llm_api_key` - OpenAI API key (required)
-- `model_id` - Model to use (default: gpt-3.5-turbo)
-- `google_api_key` - Google Custom Search API key (required)
-- `google_search_engine_id` - Google Custom Search Engine ID (required)
-- `default_chat_mode` - Default interface mode: "cli" or "tui" (default: cli)
-
-**Note**: All configuration keys except `default_chat_mode` are required for Vy to function properly.
 
 ### Memory Management
 
 ```bash
-vy remember add <fact>     # Add a fact to memory
-vy remember list           # List all stored memories
-vy remember search <query> # Search memories
-vy remember stats          # Show memory statistics
-vy remember delete <index> # Delete a memory by number
-vy remember clear --confirm # Clear all memories
-vy remember extract <text> # Test fact extraction
-```
+# List stored memories
+vy remember list
 
-## 🍽️ Nutrition Analysis
+# Search memories
+vy remember search "work project"
 
-Vy can analyze photographs of meals to identify ingredients and estimate their portions in grams - perfect for logging meals in nutrition tracking apps like Cronometer.
-
-### How to Use Nutrition Analysis
-
-Simply chat with Vy and ask it to analyze a meal photo:
-
-```bash
-💬 You: Can you analyze the ingredients in this meal photo: ~/Pictures/breakfast.jpg
-🤖 Vy: I'll analyze that meal photo for you...
-
-🍽️ Nutrition Analysis Results:
-• Steel cut oats - 45g (high confidence)
-• Blueberries - 75g (high confidence)
-• Walnuts - 30g (medium confidence)
-• Honey - 15g (medium confidence)
-
-Summary: A healthy breakfast bowl with oats, fresh berries, nuts and sweetener
-```
-
-### Supported Features
-
-- **Image Formats**: JPG, PNG, GIF, WebP
-- **Ingredient Identification**: Recognizes individual food components
-- **Portion Estimation**: Estimates quantities in grams
-- **Confidence Levels**: Indicates reliability of estimates (high/medium/low)
-- **Cronometer-Ready**: Output formatted for easy nutrition app entry
-
-### Example Usage in Chat
-
-```bash
-💬 You: Analyze this lunch photo: ./my_salad.jpg
-💬 You: What ingredients do you see in ~/Desktop/dinner.png?
-💬 You: Break down the nutrition in this meal image: /path/to/photo.jpg
-```
-
-## 🧠 Memory System
-
-Vy's memory system is designed to be simple yet effective, automatically capturing important information from your conversations.
-
-### How Memory Works
-
-**Conversation-End Analysis**: When you finish a chat session (by typing `quit`, `exit`, `bye`, or `q`), Vy automatically analyzes the entire conversation for memorable information such as:
-
-- **Personal Information** - Your name, job, location, relationships
-- **Preferences** - Things you like, dislike, or find interesting
-- **Life Events** - New jobs, moves, purchases, achievements
-- **Goals & Projects** - What you're working on or planning
-
-**During Conversation**: Vy uses the current conversation history for context, so it remembers everything you've said in the current session without any processing overhead.
-
-**Persistent Storage**: Important facts are saved between sessions, so Vy can reference them in future conversations.
-
-### Memory Features
-
-- **Smart Detection**: Automatically identifies memory-worthy information using pattern matching
-- **No Interruption**: Memory processing happens only when you exit, keeping conversations fast
-- **Manual Control**: Add, remove, or search memories manually when needed
-- **Simple Storage**: Facts are stored as plain text with timestamps and conversation context
-
-### Memory Examples
-
-**Automatic Memory (happens when you quit a conversation):**
-
-```bash
-$ vy chat
-💬 You: Hi, I'm Sarah and I just started working at Microsoft as a data scientist
-🤖 Vy: Nice to meet you, Sarah! Congratulations on the new position...
-💬 You: quit
-
-🧠 Analyzing conversation for important information...
-  📝 Analyzed 1 message(s) from this conversation
-  ✅ Stored 2 new memories
-  💾 Memories saved for future conversations
-```
-
-**Manual Memory Commands:**
-
-```bash
-# Add memories manually
-vy remember add "I work at Google as a software engineer"
-vy remember add "My favorite programming language is Rust"
-
-# Search your memories
-vy remember search "work"
-vy remember search "programming"
+# Add a memory manually
+vy remember add "I work at Amazon as a Senior Developer"
 
 # View memory statistics
 vy remember stats
 
-# List all memories with details
-vy remember list
+# Clear all memories (with confirmation)
+vy remember clear --confirm
 ```
 
-## 🛠️ Configuration
+## ⚙️ Configuration
 
-### Configuration File
+Configuration is stored in `~/.config/vy/config.toml` (or your system's config directory).
 
-Vy stores configuration in `~/.config/vy/prefs.toml` (or equivalent on your platform).
+### Key Settings
 
-Example configuration (all fields required):
+| Setting                   | Description                 | Default         |
+| ------------------------- | --------------------------- | --------------- |
+| `llm_api_key`             | OpenAI API key              | (required)      |
+| `google_api_key`          | Google API key for search   | (required)      |
+| `google_search_engine_id` | Custom search engine ID     | (required)      |
+| `llm_model_id`            | Main chat model             | `gpt-3.5-turbo` |
+| `memory_model_id`         | Model for memory processing | `gpt-4o-mini`   |
+| `default_chat_mode`       | Default interface mode      | `cli`           |
 
-```toml
-llm_api_key = "sk-..."
-model_id = "gpt-4"
-google_api_key = "your-google-api-key"
-google_search_engine_id = "your-search-engine-id"
-default_chat_mode = "cli"  # or "tui"
-```
+### Supported Models
 
-### Custom Configuration Path
+- `gpt-4o` (recommended for best quality)
+- `gpt-4o-mini` (good balance of cost/quality)
+- `gpt-4`
+- `gpt-3.5-turbo`
 
-You can specify a custom configuration path:
+## 🧠 Memory System
 
-```bash
-vy --prefs-path /path/to/custom/prefs.toml chat
-```
+Vy automatically analyzes conversations and extracts important information to remember for future interactions. Memories are stored locally and used to provide personalized responses.
 
-## 🏗️ Architecture
+### Memory Features
 
-Vy is built with a modular architecture:
+- **Automatic Learning**: Extracts facts from natural conversation
+- **Smart Search**: Finds relevant memories based on context
+- **LLM-Enhanced**: Uses AI to determine what's worth remembering
+- **Local Storage**: All memories stored on your device
 
-- **CLI Layer** (`src/cli/`) - Command-line interface and argument parsing
-- **Memory System** (`src/memory/`) - Persistent memory with semantic search
-- **Tools** (`src/tools/`) - External integrations (Google Search, etc.)
-- **Core Library** (`src/lib.rs`) - Main chat interface and conversation management
+## 🔍 Tools & Capabilities
 
-### Key Components
+- **Google Search**: Real-time web search for current information
+- **Memory System**: Personal information storage and retrieval
+- **Nutrition Analysis**: Analyze food photos for nutritional content
+- **Error Recovery**: Graceful handling of API errors and rate limits
 
-- **Simple JSON Storage**: Lightweight memory persistence with timestamps
-- **Pattern Matching**: Rule-based fact extraction from conversations
-- **Agent System**: Built on [rig-core](https://github.com/0xPlaygrounds/rig) for LLM interactions
-- **Conversation-End Processing**: Memory analysis only happens when conversations end
-- **Nutrition Analysis**: AI-powered meal photo analysis for ingredient identification and portion estimation
-
-## 🔧 Development
-
-### Prerequisites
-
-- Rust 1.70+ with 2024 edition support
-- SQLite (bundled)
-- OpenAI API key for full functionality
-
-### Building
-
-```bash
-# Development build
-cargo build
-
-# Release build
-cargo build --release
-
-# Run tests
-cargo test
-
-# Run with logging
-RUST_LOG=debug cargo run -- chat
-```
+## 🛠️ Development
 
 ### Project Structure
 
+The codebase is organized as a Cargo workspace with the following structure:
+
 ```
 vy/
-├── src/
-│   ├── cli/              # Command-line interface
-│   ├── tools/            # External tool integrations
-│   ├── simple_memory.rs  # Simple memory system
-│   ├── lib.rs            # Core library
-│   ├── main.rs           # Main entry point
-│   └── ...
-├── Cargo.toml            # Dependencies and metadata
-├── LICENSE               # MIT License
-└── README.md             # This file
+├── vy-core/src/
+│   ├── lib.rs           # Core VyCore struct and main logic
+│   ├── config.rs        # Configuration management
+│   ├── memory.rs        # Memory system implementation
+│   └── tools/           # Various tools (search, memory, etc.)
+├── vy-cli/src/
+│   ├── lib.rs           # CLI application logic
+│   ├── chat.rs          # Chat interface implementation
+│   ├── config.rs        # Configuration commands
+│   └── memory.rs        # Memory management commands
+├── vy-tui/src/
+│   └── lib.rs           # TUI implementation (minimal)
+└── vy/src/
+    └── main.rs          # Main binary entry point
 ```
 
-### Contributing
+### Adding New Interfaces
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Run `cargo test` and `cargo clippy`
-5. Submit a pull request
+To add a new interface (e.g., web, mobile):
 
-## 📊 Memory System Details
+1. Create a new crate (e.g., `vy-web`)
+2. Add `vy-core` as a dependency
+3. Use `vy_core::builder::build_openai_vy()` to create a VyCore instance
+4. Implement your interface around the VyCore methods
+5. Add the new crate to the workspace
 
-Key highlights:
+### Key APIs
 
-- **Simplicity**: Lightweight JSON storage with pattern-based extraction
-- **Performance**: No processing during conversation, analysis only on exit
-- **Automatic**: Detects important personal information without user intervention
-- **Manual Control**: Full CLI tools for memory management when needed
+The `VyCore` struct provides these main methods:
 
-## 🔍 Examples
+```rust
+// Send a message and get response
+async fn send_message(&mut self, input: &str) -> Result<String>
 
-### Basic Chat Session (CLI Mode)
+// Access conversation history
+fn conversation_history(&self) -> &[Message]
+
+// Clear conversation history
+fn clear_history(&mut self) -> usize
+
+// Analyze conversation for memories
+async fn analyze_conversation_memories(&self) -> Result<()>
+```
+
+## 🧪 Testing
 
 ```bash
-$ vy chat
-🤖 Vy - gpt-4 | Type 'help' for commands
+# Run all tests
+cargo test
 
-💬 You: My name is Alice and I love mountain hiking
-🤖 Vy: Nice to meet you, Alice! Mountain hiking sounds wonderful...
-
-💬 You: quit
-🧠 Analyzing conversation for important information...
-  📝 Analyzed 1 message(s) from this conversation
-  ✅ Stored 2 new memories
-  💾 Memories saved for future conversations
-```
-
-### TUI Mode Experience
-
-```bash
-$ vy chat --tui
-```
-
-This opens a full-screen terminal interface:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ 🤖 Vy - gpt-4 | F1: Help | Esc: Exit                          │
-├─────────────────────────────────────────────────────────────────┤
-│ Chat                                                            │
-│ ℹ️  Welcome to Vy TUI - gpt-4! Type your message and press...  │
-│ ℹ️  Press F1 or '?' for help, Esc to exit.                    │
-│ 💬 You: Hello, I'm Alice                                       │
-│ 🤖 Vy: Nice to meet you, Alice! How can I help you today?     │
-│                                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│ Input                                                           │
-│ |                                                               │
-├─────────────────────────────────────────────────────────────────┤
-│ Messages: 4 | Scroll: ↑↓ | Page: PgUp/PgDn | History: 2 msgs  │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Memory Management
-
-```bash
-$ vy remember add "Alice works as a software engineer at Google"
-✅ Added memory: Alice works as a software engineer at Google
-
-$ vy remember search "Alice work"
-🔍 Found 1 matching memories:
-1. [2025-01-02 10:30] User's name is Alice
-   Source: conversation_20250102_103015
-
-2. [2025-01-02 10:30] User works as a software engineer at Google
-   Source: conversation_20250102_103015
+# Test specific crate
+cargo test --package vy-core
 ```
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
-## 🤝 Acknowledgments
+## 🤝 Contributing
 
-- Built with [rig-core](https://github.com/0xPlaygrounds/rig) for LLM integration
-- Uses [clap](https://github.com/clap-rs/clap) for CLI parsing
-- TUI powered by [ratatui](https://github.com/ratatui-org/ratatui) and [crossterm](https://github.com/crossterm-rs/crossterm)
-- Powered by [tokio](https://github.com/tokio-rs/tokio) for async runtime
-- Simple JSON storage with [serde_json](https://github.com/serde-rs/json)
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 🚧 Roadmap
+
+- [ ] Complete TUI implementation with full feature parity
+- [ ] Web interface (vy-web)
+- [ ] Native mobile apps (vy-mobile)
+- [ ] Plugin system for custom tools
+- [ ] Multi-provider support (Anthropic, etc.)
+- [ ] Voice interface support
+- [ ] Conversation export/import
+- [ ] Advanced memory management UI
 
 ## 📞 Support
 
-- **Issues**: Report bugs and feature requests on GitHub Issues
-- **Discussions**: Join the community discussions for questions and ideas
+For issues, feature requests, or questions:
+
+1. Check existing issues on GitHub
+2. Create a new issue with detailed description
+3. Include configuration details (with sensitive data removed)
 
 ---
 
-**Made with ❤️ in Rust**
+**Note**: This refactored version provides a solid foundation for adding mobile interfaces while maintaining clean separation of concerns between the core functionality and different user interfaces.

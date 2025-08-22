@@ -1,0 +1,27 @@
+[package]
+name = "vy-tui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Terminal User Interface for the Vy AI chatbot"
+
+[dependencies]
+vy-core = { path = "../vy-core" }
+
+anyhow.workspace = true
+tokio.workspace = true
+log.workspace = true
+
+# TUI dependencies
+ratatui.workspace = true
+crossterm.workspace = true
+
+# Date/time
+chrono.workspace = true
+
+# LLM providers
+rig-core.workspace = true
+
+[dev-dependencies]
+env_logger.workspace = true
