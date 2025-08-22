@@ -175,15 +175,14 @@ Extract facts about:
 - Life events: birthdays, anniversaries, milestones
 - Projects & goals: what they're working on, planning
 
-{}
+{existing_context}
 
-Conversation: "{}"
+Conversation: "{user_input}"
 
 Only extract NEW facts that are NOT already in the existing memories. Format each fact as a clear, specific statement. Include names, dates, times, and places when mentioned.
 
 Return ONLY a JSON array of NEW facts, like:
-["Has a son named Henry who is turning 18", "Has appointment with nutritionist Michael at 4pm", "Needs to update food logging in Cronometer"]"#,
-            existing_context, user_input
+["Has a son named Henry who is turning 18", "Has appointment with nutritionist Michael at 4pm", "Needs to update food logging in Cronometer"]"#
         );
 
         let agent = client
@@ -402,11 +401,10 @@ Return ONLY a JSON array of NEW facts, like:
 Consider them similar if they refer to the same person, place, or concept with equivalent meaning,
 even if worded differently.
 
-Fact 1: "{}"
-Fact 2: "{}"
+Fact 1: "{fact1}"
+Fact 2: "{fact2}"
 
-Are these facts essentially the same? Respond with only "YES" or "NO"."#,
-            fact1, fact2
+Are these facts essentially the same? Respond with only "YES" or "NO"."#
         );
 
         let agent = client

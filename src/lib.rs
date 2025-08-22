@@ -5,6 +5,7 @@ use std::io::{self, Write};
 
 pub mod simple_memory;
 pub mod tools;
+pub mod tui;
 
 use simple_memory::{SimpleMemory, default_memory_file};
 

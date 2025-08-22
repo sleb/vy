@@ -168,8 +168,7 @@ impl SimpleMemoryCommand {
 
                 if !yes {
                     print!(
-                        "⚠️  This will consolidate {} memory entries. Continue? [y/N]: ",
-                        entries_before
+                        "⚠️  This will consolidate {entries_before} memory entries. Continue? [y/N]: "
                     );
                     std::io::stdout().flush()?;
 
@@ -196,8 +195,7 @@ impl SimpleMemoryCommand {
 
                 if !prefs.llm_api_key.is_empty() {
                     println!(
-                        "🧹 Consolidating {} memory entries with LLM analysis...",
-                        entries_before
+                        "🧹 Consolidating {entries_before} memory entries with LLM analysis..."
                     );
                     memory
                         .vacuum(&prefs.llm_api_key, &prefs.memory_similarity_model_id)
@@ -215,10 +213,9 @@ impl SimpleMemoryCommand {
 
                 if removed > 0 {
                     println!(
-                        "✅ Vacuum completed! Removed {} redundant entries.",
-                        removed
+                        "✅ Vacuum completed! Removed {removed} redundant entries."
                     );
-                    println!("📊 Memory entries: {} → {}", entries_before, entries_after);
+                    println!("📊 Memory entries: {entries_before} → {entries_after}");
                 } else {
                     println!("✅ Vacuum completed! No redundant entries found.");
                 }

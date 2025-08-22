@@ -38,8 +38,15 @@ pub struct Cli {
 
 #[derive(Debug, clap::Subcommand)]
 enum Commands {
-    /// Start the chatbot
-    Chat,
+    /// Start the chatbot (default: from config, use --tui/--cli to override)
+    Chat {
+        /// Use TUI (Terminal User Interface) mode - modern full-screen interface with real-time chat
+        #[clap(long)]
+        tui: bool,
+        /// Use CLI mode - classic text-based interface
+        #[clap(long)]
+        cli: bool,
+    },
     /// Manage configuration values
     Config {
         /// Edit the preferences file in your default editor
@@ -58,9 +65,29 @@ enum Commands {
 impl Cli {
     pub async fn run(&self) -> Result<()> {
         match &self.command {
-            Commands::Chat => {
+            Commands::Chat { tui, cli } => {
                 let prefs = self.load_prefs()?;
-                chat::run_chat(&prefs).await
+
+                // Determine which mode to use
+                let use_tui = if *tui && *cli {
+                    // Both flags specified - show error
+                    anyhow::bail!(
+                        "Cannot specify both --tui and --cli flags. Choose one or rely on default configuration."
+                    );
+                } else if *tui {
+                    true
+                } else if *cli {
+                    false
+                } else {
+                    // No explicit flag, use configuration default
+                    prefs.default_chat_mode == "tui"
+                };
+
+                if use_tui {
+                    chat::run_chat_tui(&prefs).await
+                } else {
+                    chat::run_chat(&prefs).await
+                }
             }
             Commands::Config { edit, action } => {
                 let prefs_path = self
@@ -122,7 +149,7 @@ impl Cli {
         let status = std::process::Command::new(&editor)
             .arg(prefs_path)
             .status()
-            .with_context(|| format!("Failed to open editor: {}", editor))?;
+            .with_context(|| format!("Failed to open editor: {editor}"))?;
 
         if !status.success() {
             anyhow::bail!("Editor exited with non-zero status");

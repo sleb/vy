@@ -6,8 +6,9 @@ Vy is a command-line AI assistant built in Rust that combines the power of large
 
 ## ✨ Features
 
-- **💬 Interactive Chat**: Natural conversation with AI models (OpenAI GPT)
+- **💬 Interactive Chat**: Natural conversation with AI models (OpenAI GPT) in CLI or TUI mode
 - **🧠 Persistent Memory**: Remembers facts, preferences, and relationships across sessions
+- **🖥️ Modern TUI Interface**: Beautiful terminal UI with real-time chat and help system
 - **🔍 Smart Search**: Find relevant memories using semantic search
 - **🔧 Configuration Management**: Easy setup and customization
 - **🌐 Google Search Integration**: Access real-time information (model-dependent)
@@ -58,7 +59,8 @@ Vy is a command-line AI assistant built in Rust that combines the power of large
 3. **Start chatting**:
 
    ```bash
-   vy chat
+   vy chat          # CLI mode (classic)
+   vy chat --tui    # TUI mode (modern terminal interface)
    ```
 
 4. **Start chatting with automatic memory**:
@@ -80,8 +82,30 @@ Vy is a command-line AI assistant built in Rust that combines the power of large
 ### Chat
 
 ```bash
-vy chat                    # Start interactive chat session
+vy chat                    # Start chat using configured default mode
+vy chat --tui              # Force TUI mode (overrides config)
+vy chat --cli              # Force CLI mode (overrides config)
 ```
+
+#### TUI Mode Features
+
+The Terminal User Interface (TUI) mode provides a modern, interactive experience:
+
+- **Real-time Interface**: Live chat display with message history
+- **Keyboard Navigation**:
+  - `Enter` - Send message
+  - `↑/↓` - Scroll through messages
+  - `PgUp/PgDn` - Page through message history
+  - `F1` or `?` - Show help screen
+  - `Esc` - Exit application
+- **Visual Feedback**: Color-coded messages and status indicators
+- **Message Types**:
+  - Green - Your messages
+  - Blue - Vy's responses
+  - Red - Error messages
+  - Yellow - System messages
+- **Help System**: Built-in help accessible with F1
+- **Auto-scrolling**: Automatically follows new messages
 
 **Chat Commands** (available during conversation):
 
@@ -100,14 +124,22 @@ vy config list            # List all configuration values
 vy config --edit          # Edit config file in your default editor
 ```
 
+**Setting Your Default Chat Mode**:
+
+```bash
+vy config set default_chat_mode cli    # Use CLI mode by default
+vy config set default_chat_mode tui    # Use TUI mode by default
+```
+
 **Available Config Keys**:
 
 - `llm_api_key` - OpenAI API key (required)
 - `model_id` - Model to use (default: gpt-3.5-turbo)
 - `google_api_key` - Google Custom Search API key (required)
 - `google_search_engine_id` - Google Custom Search Engine ID (required)
+- `default_chat_mode` - Default interface mode: "cli" or "tui" (default: cli)
 
-**Note**: All configuration keys are required for Vy to function properly.
+**Note**: All configuration keys except `default_chat_mode` are required for Vy to function properly.
 
 ### Memory Management
 
@@ -229,6 +261,7 @@ llm_api_key = "sk-..."
 model_id = "gpt-4"
 google_api_key = "your-google-api-key"
 google_search_engine_id = "your-search-engine-id"
+default_chat_mode = "cli"  # or "tui"
 ```
 
 ### Custom Configuration Path
@@ -315,24 +348,46 @@ Key highlights:
 
 ## 🔍 Examples
 
-### Basic Chat Session
+### Basic Chat Session (CLI Mode)
 
 ```bash
 $ vy chat
-┌─────────────────────────────────────────────────────────────────┐
-│  🤖 Welcome to Vy - Your AI Assistant                           │
-│  Model: gpt-4                                                   │
-│  ...                                                            │
-└─────────────────────────────────────────────────────────────────┘
+🤖 Vy - gpt-4 | Type 'help' for commands
 
 💬 You: My name is Alice and I love mountain hiking
-🤖 Vy (new chat): Nice to meet you, Alice! Mountain hiking sounds wonderful...
+🤖 Vy: Nice to meet you, Alice! Mountain hiking sounds wonderful...
 
 💬 You: quit
 🧠 Analyzing conversation for important information...
   📝 Analyzed 1 message(s) from this conversation
   ✅ Stored 2 new memories
   💾 Memories saved for future conversations
+```
+
+### TUI Mode Experience
+
+```bash
+$ vy chat --tui
+```
+
+This opens a full-screen terminal interface:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 🤖 Vy - gpt-4 | F1: Help | Esc: Exit                          │
+├─────────────────────────────────────────────────────────────────┤
+│ Chat                                                            │
+│ ℹ️  Welcome to Vy TUI - gpt-4! Type your message and press...  │
+│ ℹ️  Press F1 or '?' for help, Esc to exit.                    │
+│ 💬 You: Hello, I'm Alice                                       │
+│ 🤖 Vy: Nice to meet you, Alice! How can I help you today?     │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│ Input                                                           │
+│ |                                                               │
+├─────────────────────────────────────────────────────────────────┤
+│ Messages: 4 | Scroll: ↑↓ | Page: PgUp/PgDn | History: 2 msgs  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Memory Management
@@ -358,6 +413,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built with [rig-core](https://github.com/0xPlaygrounds/rig) for LLM integration
 - Uses [clap](https://github.com/clap-rs/clap) for CLI parsing
+- TUI powered by [ratatui](https://github.com/ratatui-org/ratatui) and [crossterm](https://github.com/crossterm-rs/crossterm)
 - Powered by [tokio](https://github.com/tokio-rs/tokio) for async runtime
 - Simple JSON storage with [serde_json](https://github.com/serde-rs/json)
 

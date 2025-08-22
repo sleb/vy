@@ -60,7 +60,7 @@ impl fmt::Display for NutritionAnalysisResponse {
 
         if let Some(notes) = &self.notes {
             if !notes.trim().is_empty() {
-                writeln!(f, "**Notes:** {}", notes)?;
+                writeln!(f, "**Notes:** {notes}")?;
             }
         }
 
@@ -96,14 +96,12 @@ impl NutritionAnalysisTool {
         {
             // Try to parse natural language response into structured format
             return Err(NutritionAnalysisError::new(format!(
-                "Could not extract JSON from response. The AI responded with natural language instead of JSON format. Response was: {}",
-                content
+                "Could not extract JSON from response. The AI responded with natural language instead of JSON format. Response was: {content}"
             )));
         }
 
         Err(NutritionAnalysisError::new(format!(
-            "No JSON object found in response: {}",
-            content
+            "No JSON object found in response: {content}"
         )))
     }
 
@@ -113,8 +111,8 @@ impl NutritionAnalysisTool {
         image_path: &str,
     ) -> Result<(String, String), NutritionAnalysisError> {
         // Handle file:// URLs by stripping the protocol
-        let clean_path = if image_path.starts_with("file://") {
-            &image_path[7..] // Remove "file://" prefix
+        let clean_path = if let Some(stripped) = image_path.strip_prefix("file://") {
+            stripped // Remove "file://" prefix
         } else {
             image_path
         };
@@ -124,8 +122,7 @@ impl NutritionAnalysisTool {
         // Check if file exists
         if !path.exists() {
             return Err(NutritionAnalysisError::new(format!(
-                "Image file not found: {}. Please check the file path and ensure the file exists. On macOS, try moving the image to a location like ~/Documents or ~/Pictures if it's on the Desktop.",
-                image_path
+                "Image file not found: {image_path}. Please check the file path and ensure the file exists. On macOS, try moving the image to a location like ~/Documents or ~/Pictures if it's on the Desktop."
             )));
         }
 
@@ -135,9 +132,9 @@ impl NutritionAnalysisTool {
 
         // Read the file
         let image_data = std::fs::read(path).map_err(|e| {
-            print!(" ❌\n");
+            println!(" ❌");
             io::stdout().flush().ok();
-            NutritionAnalysisError::new(format!("Failed to read image file: {}. This might be due to macOS file access permissions. Try moving the image to ~/Documents or ~/Pictures, or grant terminal access to Desktop in System Preferences > Security & Privacy > Privacy > Files and Folders.", e))
+            NutritionAnalysisError::new(format!("Failed to read image file: {e}. This might be due to macOS file access permissions. Try moving the image to ~/Documents or ~/Pictures, or grant terminal access to Desktop in System Preferences > Security & Privacy > Privacy > Files and Folders."))
         })?;
 
         print!(" ✅\n🔄 Encoding image...");
@@ -159,7 +156,7 @@ impl NutritionAnalysisTool {
         // Encode to base64
         let base64_image = general_purpose::STANDARD.encode(&image_data);
 
-        print!(" ✅\n");
+        println!(" ✅");
         io::stdout().flush().ok();
 
         Ok((base64_image, mime_type.to_string()))
@@ -277,19 +274,18 @@ impl Tool for NutritionAnalysisTool {
             .send()
             .await
             .map_err(|e| {
-                print!(" ❌\n");
+                println!(" ❌");
                 io::stdout().flush().ok();
-                NutritionAnalysisError::new(format!("Failed to send request to OpenAI: {}. Check your internet connection and API key.", e))
+                NutritionAnalysisError::new(format!("Failed to send request to OpenAI: {e}. Check your internet connection and API key."))
             })?;
 
         if !response.status().is_success() {
-            print!(" ❌\n");
+            println!(" ❌");
             io::stdout().flush().ok();
             let status = response.status();
             let error_text = response.text().await.unwrap_or_default();
             return Err(NutritionAnalysisError::new(format!(
-                "OpenAI API request failed with status {}: {}. This might be due to API quota limits or invalid API key.",
-                status, error_text
+                "OpenAI API request failed with status {status}: {error_text}. This might be due to API quota limits or invalid API key."
             )));
         }
 
@@ -297,17 +293,17 @@ impl Tool for NutritionAnalysisTool {
         io::stdout().flush().ok();
 
         let response_text = response.text().await.map_err(|e| {
-            print!(" ❌\n");
+            println!(" ❌");
             io::stdout().flush().ok();
-            NutritionAnalysisError::new(format!("Failed to read response: {}", e))
+            NutritionAnalysisError::new(format!("Failed to read response: {e}"))
         })?;
 
         // Parse the OpenAI response
         let api_response: serde_json::Value =
             serde_json::from_str(&response_text).map_err(|e| {
-                print!(" ❌\n");
+                println!(" ❌");
                 io::stdout().flush().ok();
-                NutritionAnalysisError::new(format!("Failed to parse API response: {}", e))
+                NutritionAnalysisError::new(format!("Failed to parse API response: {e}"))
             })?;
 
         // Extract the content from the response
@@ -318,7 +314,7 @@ impl Tool for NutritionAnalysisTool {
             .and_then(|message| message.get("content"))
             .and_then(|content| content.as_str())
             .ok_or_else(|| {
-                print!(" ❌\n");
+                println!(" ❌");
                 io::stdout().flush().ok();
                 NutritionAnalysisError::new(
                     "Invalid API response format - no content found in response",
@@ -347,11 +343,10 @@ impl Tool for NutritionAnalysisTool {
                 // Fallback: try to extract JSON from natural language response
                 let json_content = self.extract_json_from_response(cleaned_content)?;
                 serde_json::from_str(&json_content).map_err(|e| {
-                        print!(" ❌\n");
+                        println!(" ❌");
                         io::stdout().flush().ok();
                         NutritionAnalysisError::new(format!(
-                            "Failed to parse nutrition analysis even after extraction: {}. The AI may have responded with unexpected format. Cleaned response: {}",
-                            e, cleaned_content
+                            "Failed to parse nutrition analysis even after extraction: {e}. The AI may have responded with unexpected format. Cleaned response: {cleaned_content}"
                         ))
                     })?
             }

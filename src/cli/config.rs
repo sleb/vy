@@ -13,6 +13,7 @@ pub enum ConfigKey {
     ModelId,
     MemoryModelId,
     MemorySimilarityModelId,
+    DefaultChatMode,
 }
 
 impl ConfigKey {
@@ -24,6 +25,7 @@ impl ConfigKey {
             "model_id" => Some(Self::ModelId),
             "memory_model_id" => Some(Self::MemoryModelId),
             "memory_similarity_model_id" => Some(Self::MemorySimilarityModelId),
+            "default_chat_mode" => Some(Self::DefaultChatMode),
             _ => None,
         }
     }
@@ -36,6 +38,7 @@ impl ConfigKey {
             Self::ModelId => "model_id",
             Self::MemoryModelId => "memory_model_id",
             Self::MemorySimilarityModelId => "memory_similarity_model_id",
+            Self::DefaultChatMode => "default_chat_mode",
         }
     }
 
@@ -51,6 +54,7 @@ impl ConfigKey {
             Self::ModelId => &prefs.model_id,
             Self::MemoryModelId => &prefs.memory_model_id,
             Self::MemorySimilarityModelId => &prefs.memory_similarity_model_id,
+            Self::DefaultChatMode => &prefs.default_chat_mode,
         }
     }
 
@@ -62,6 +66,7 @@ impl ConfigKey {
             Self::ModelId => prefs.model_id = value,
             Self::MemoryModelId => prefs.memory_model_id = value,
             Self::MemorySimilarityModelId => prefs.memory_similarity_model_id = value,
+            Self::DefaultChatMode => prefs.default_chat_mode = value,
         }
     }
 
@@ -73,6 +78,7 @@ impl ConfigKey {
             Self::ModelId,
             Self::MemoryModelId,
             Self::MemorySimilarityModelId,
+            Self::DefaultChatMode,
         ]
     }
 }
@@ -114,6 +120,20 @@ fn validate_model_id(model_id: &str) -> Result<(), String> {
             "Model '{}' is not in the list of common models.\n   💡 Common options: {}",
             model_id,
             valid_models.join(", ")
+        ))
+    }
+}
+
+fn validate_chat_mode(mode: &str) -> Result<(), String> {
+    let valid_modes = ["cli", "tui"];
+
+    if valid_modes.contains(&mode) {
+        Ok(())
+    } else {
+        Err(format!(
+            "Chat mode '{}' is not valid.\n   💡 Valid options: {}",
+            mode,
+            valid_modes.join(", ")
         ))
     }
 }
@@ -216,6 +236,13 @@ pub fn run_config(
                 }
             }
 
+            if matches!(config_key, ConfigKey::DefaultChatMode) {
+                if let Err(error) = validate_chat_mode(&actual_value) {
+                    println!("❌ {error}");
+                    return Ok(());
+                }
+            }
+
             config_key.set_value(&mut prefs, actual_value);
             prefs::save_prefs(&prefs, prefs_path).context("Failed to save preferences")?;
             println!("Successfully set {}", config_key.as_str());
@@ -271,6 +298,7 @@ pub fn run_config(
                 model_id: "gpt-3.5-turbo".to_string(),
                 memory_model_id: "gpt-4".to_string(),
                 memory_similarity_model_id: "gpt-3.5-turbo".to_string(),
+                default_chat_mode: "cli".to_string(),
             };
 
             // Prompt for LLM API key (required)
@@ -315,7 +343,7 @@ pub fn run_config(
                             break;
                         }
                         Err(warning) => {
-                            println!("⚠️  {}", warning);
+                            println!("⚠️  {warning}");
                             print!("Use this model anyway? (y/N): ");
                             std::io::stdout()
                                 .flush()
@@ -357,7 +385,7 @@ pub fn run_config(
                             break;
                         }
                         Err(warning) => {
-                            println!("⚠️  {}", warning);
+                            println!("⚠️  {warning}");
                             print!("Use this model anyway? (y/N): ");
                             std::io::stdout()
                                 .flush()
@@ -402,7 +430,7 @@ pub fn run_config(
                             break;
                         }
                         Err(warning) => {
-                            println!("⚠️  {}", warning);
+                            println!("⚠️  {warning}");
                             print!("Use this model anyway? (y/N): ");
                             std::io::stdout()
                                 .flush()
@@ -471,6 +499,38 @@ pub fn run_config(
                 break;
             }
 
+            // Default chat mode (optional)
+            loop {
+                println!("\n💬 Default Chat Mode:");
+                println!("   • 'cli' - Classic text-based interface (simple, universal)");
+                println!("   • 'tui' - Modern terminal UI (visual, interactive)");
+                print!("Choose default mode (cli/tui) [default: cli]: ");
+                std::io::stdout()
+                    .flush()
+                    .context("Failed to flush stdout")?;
+                let mut chat_mode = String::new();
+                std::io::stdin()
+                    .read_line(&mut chat_mode)
+                    .context("Failed to read chat mode")?;
+
+                let chat_mode = chat_mode.trim();
+                if chat_mode.is_empty() {
+                    prefs.default_chat_mode = "cli".to_string();
+                    break;
+                } else {
+                    match validate_chat_mode(chat_mode) {
+                        Ok(_) => {
+                            prefs.default_chat_mode = chat_mode.to_string();
+                            break;
+                        }
+                        Err(error) => {
+                            println!("❌ {error}");
+                            continue;
+                        }
+                    }
+                }
+            }
+
             prefs::save_prefs(&prefs, prefs_path)?;
 
             println!("\n🎉 Configuration Setup Complete!");
@@ -493,11 +553,18 @@ pub fn run_config(
                 "   • Memory similarity: {}",
                 prefs.memory_similarity_model_id
             );
+            println!("✅ Default chat mode: {}", prefs.default_chat_mode);
 
             // Next steps
             println!("\n🚀 Next Steps:");
             if !prefs.llm_api_key.is_empty() {
-                println!("   • Start chatting: vy chat");
+                if prefs.default_chat_mode == "tui" {
+                    println!("   • Start chatting: vy chat (will use TUI mode by default)");
+                    println!("   • Force CLI mode: vy chat --cli");
+                } else {
+                    println!("   • Start chatting: vy chat (will use CLI mode by default)");
+                    println!("   • Try TUI mode: vy chat --tui");
+                }
                 println!("   • Test memory: vy chat (memories are auto-saved after conversations)");
             } else {
                 println!("   • Set your OpenAI API key: vy config set llm_api_key");

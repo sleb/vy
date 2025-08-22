@@ -20,6 +20,10 @@ pub fn default_memory_preamble() -> String {
     "You are an expert at extracting and formatting important personal information from conversations.".to_string()
 }
 
+fn default_chat_mode() -> String {
+    "cli".to_string()
+}
+
 pub fn default_preamble() -> String {
     r#"You are Vy, a female AI assistant. You're confident, helpful, naturally curious, and fun.
 You have access to both real-time Google search and personal memory about the user.
@@ -73,6 +77,8 @@ pub struct Prefs {
     pub memory_model_id: String,
     #[serde(default = "default_memory_similarity_model_id")]
     pub memory_similarity_model_id: String,
+    #[serde(default = "default_chat_mode")]
+    pub default_chat_mode: String,
 }
 
 pub fn load_prefs(path: &Path) -> Result<Prefs> {

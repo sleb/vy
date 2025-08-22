@@ -7,6 +7,7 @@ use vy::{
         GoogleSearchTool, MemoryRemoveTool, MemoryStoreTool, MemoryTool, NutritionAnalysisTool,
         SmartMemoryUpdateTool,
     },
+    tui::VyTui,
 };
 
 use crate::prefs::Prefs;
@@ -63,6 +64,94 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
         prefs.memory_model_id.clone(),
     );
     vy.chat().await.context("Failed to start Vy chatbot")?;
+
+    Ok(())
+}
+
+pub async fn run_chat_tui(prefs: &Prefs) -> Result<()> {
+    // Check if terminal supports TUI mode
+    if std::env::var("TERM").is_err() || std::env::var("TERM").unwrap_or_default().is_empty() {
+        eprintln!("❌ TUI mode requires a terminal environment.");
+        eprintln!("💡 Try using CLI mode instead: vy chat");
+        return Ok(());
+    }
+
+    // Check for very basic terminals that may not support advanced features
+    let term_type = std::env::var("TERM").unwrap_or_default();
+    if term_type == "dumb" || term_type.starts_with("vt") {
+        eprintln!(
+            "⚠️  Your terminal ({term_type}) may not fully support TUI mode."
+        );
+        eprintln!("💡 If you experience issues, try CLI mode: vy chat");
+        eprintln!("   Press Enter to continue with TUI mode, or Ctrl+C to cancel...");
+
+        let mut input = String::new();
+        if std::io::stdin().read_line(&mut input).is_err() {
+            eprintln!("❌ Failed to read input. Falling back to CLI mode.");
+            return run_chat(prefs).await;
+        }
+    }
+
+    // Check for unsupported models
+    if prefs.model_id == "gpt-5-mini" || prefs.model_id == "gpt-5" {
+        eprintln!(
+            "❌ Error: {} is not currently supported due to tool calling compatibility issues.",
+            prefs.model_id
+        );
+        eprintln!("💡 Please use one of these supported models instead:");
+        eprintln!("   • gpt-4o");
+        eprintln!("   • gpt-4o-mini");
+        eprintln!("   • gpt-4");
+        eprintln!("   • gpt-3.5-turbo");
+        eprintln!("\n   To change your model: vy config set model_id");
+        return Ok(());
+    }
+
+    let client = openai::Client::builder(&prefs.llm_api_key)
+        .build()
+        .context("Failed to create LLM client")?;
+
+    // Load memory context and enhance preamble
+    let preamble = load_memory_enhanced_preamble().await?;
+
+    // Create tools
+    let google_search_tool = GoogleSearchTool::new(
+        prefs.google_api_key.clone(),
+        prefs.google_search_engine_id.clone(),
+    );
+    let memory_tool = MemoryTool::new();
+    let memory_store_tool = MemoryStoreTool::new();
+    let memory_remove_tool = MemoryRemoveTool::new();
+    let smart_memory_update_tool = SmartMemoryUpdateTool::new();
+    let nutrition_analysis_tool = NutritionAnalysisTool::new(prefs.llm_api_key.clone());
+
+    let agent = client
+        .agent(&prefs.model_id)
+        .preamble(&preamble)
+        .tool(google_search_tool)
+        .tool(memory_tool)
+        .tool(memory_store_tool)
+        .tool(memory_remove_tool)
+        .tool(smart_memory_update_tool)
+        .tool(nutrition_analysis_tool)
+        .build();
+
+    let vy_tui = VyTui::new(
+        agent,
+        prefs.model_id.clone(),
+        prefs.llm_api_key.clone(),
+        prefs.memory_model_id.clone(),
+    );
+    match vy_tui.run().await {
+        Ok(()) => {}
+        Err(e) => {
+            eprintln!("❌ TUI mode failed: {e}");
+            eprintln!("💡 This might be due to terminal compatibility issues.");
+            eprintln!("   Try using CLI mode instead: vy chat");
+            eprintln!("\n🔄 Falling back to CLI mode...\n");
+            return run_chat(prefs).await;
+        }
+    }
 
     Ok(())
 }
@@ -128,7 +217,7 @@ RESPONSE GUIDELINES:
 - Prioritize recent and current information over old entries"#,
         relevant_memories
             .iter()
-            .map(|fact| format!("• {}", fact))
+            .map(|fact| format!("• {fact}"))
             .collect::<Vec<_>>()
             .join("\n")
     );
@@ -138,7 +227,7 @@ RESPONSE GUIDELINES:
         relevant_memories.len()
     );
 
-    Ok(format!("{}{}", base_preamble, memory_context))
+    Ok(format!("{base_preamble}{memory_context}"))
 }
 
 /// Extract relevant context using LLM analysis with temporal and relevance awareness
@@ -171,7 +260,7 @@ async fn extract_relevant_context(
             } else if days_ago == 1 {
                 " [YESTERDAY]"
             } else if days_ago <= 7 {
-                &format!(" [{}D AGO]", days_ago)
+                &format!(" [{days_ago}D AGO]")
             } else {
                 " [OLD]"
             };
@@ -296,7 +385,7 @@ async fn fallback_memory_search(memory: &SimpleMemory) -> Result<String> {
         "\n\nIMPORTANT USER CONTEXT (from previous conversations):\n{}",
         relevant_memories
             .iter()
-            .map(|fact| format!("• {}", fact))
+            .map(|fact| format!("• {fact}"))
             .collect::<Vec<_>>()
             .join("\n")
     );
