@@ -12,6 +12,7 @@ Vy is a command-line AI assistant built in Rust that combines the power of large
 - **🔧 Configuration Management**: Easy setup and customization
 - **🌐 Google Search Integration**: Access real-time information (model-dependent)
 - **📊 Memory Analytics**: Track and analyze your stored memories
+- **🍽️ Nutrition Analysis**: Analyze meal photos to identify ingredients and portions
 - **🚀 Fast & Efficient**: Built in Rust for performance
 
 ## 🚀 Quick Start
@@ -120,6 +121,43 @@ vy remember clear --confirm # Clear all memories
 vy remember extract <text> # Test fact extraction
 ```
 
+## 🍽️ Nutrition Analysis
+
+Vy can analyze photographs of meals to identify ingredients and estimate their portions in grams - perfect for logging meals in nutrition tracking apps like Cronometer.
+
+### How to Use Nutrition Analysis
+
+Simply chat with Vy and ask it to analyze a meal photo:
+
+```bash
+💬 You: Can you analyze the ingredients in this meal photo: ~/Pictures/breakfast.jpg
+🤖 Vy: I'll analyze that meal photo for you...
+
+🍽️ Nutrition Analysis Results:
+• Steel cut oats - 45g (high confidence)
+• Blueberries - 75g (high confidence)
+• Walnuts - 30g (medium confidence)
+• Honey - 15g (medium confidence)
+
+Summary: A healthy breakfast bowl with oats, fresh berries, nuts and sweetener
+```
+
+### Supported Features
+
+- **Image Formats**: JPG, PNG, GIF, WebP
+- **Ingredient Identification**: Recognizes individual food components
+- **Portion Estimation**: Estimates quantities in grams
+- **Confidence Levels**: Indicates reliability of estimates (high/medium/low)
+- **Cronometer-Ready**: Output formatted for easy nutrition app entry
+
+### Example Usage in Chat
+
+```bash
+💬 You: Analyze this lunch photo: ./my_salad.jpg
+💬 You: What ingredients do you see in ~/Desktop/dinner.png?
+💬 You: Break down the nutrition in this meal image: /path/to/photo.jpg
+```
+
 ## 🧠 Memory System
 
 Vy's memory system is designed to be simple yet effective, automatically capturing important information from your conversations.
@@ -216,6 +254,7 @@ Vy is built with a modular architecture:
 - **Pattern Matching**: Rule-based fact extraction from conversations
 - **Agent System**: Built on [rig-core](https://github.com/0xPlaygrounds/rig) for LLM interactions
 - **Conversation-End Processing**: Memory analysis only happens when conversations end
+- **Nutrition Analysis**: AI-powered meal photo analysis for ingredient identification and portion estimation
 
 ## 🔧 Development
 

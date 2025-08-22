@@ -152,6 +152,9 @@ impl<M: CompletionModel> Vy<M> {
         println!("💬 Just type naturally to chat with Vy!");
         println!("🧠 Your conversations are automatically remembered for context");
         println!("🔍 Vy has access to real-time Google search and personal memory");
+        println!(
+            "🍽️ Ask Vy to analyze meal photos for ingredient breakdown (perfect for Cronometer)"
+        );
         println!();
     }
 

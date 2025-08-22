@@ -4,7 +4,8 @@ use vy::{
     Vy,
     simple_memory::{SimpleMemory, default_memory_file},
     tools::{
-        GoogleSearchTool, MemoryRemoveTool, MemoryStoreTool, MemoryTool, SmartMemoryUpdateTool,
+        GoogleSearchTool, MemoryRemoveTool, MemoryStoreTool, MemoryTool, NutritionAnalysisTool,
+        SmartMemoryUpdateTool,
     },
 };
 
@@ -42,6 +43,7 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
     let memory_store_tool = MemoryStoreTool::new();
     let memory_remove_tool = MemoryRemoveTool::new();
     let smart_memory_update_tool = SmartMemoryUpdateTool::new();
+    let nutrition_analysis_tool = NutritionAnalysisTool::new(prefs.llm_api_key.clone());
 
     let agent = client
         .agent(&prefs.model_id)
@@ -51,6 +53,7 @@ pub async fn run_chat(prefs: &Prefs) -> Result<()> {
         .tool(memory_store_tool)
         .tool(memory_remove_tool)
         .tool(smart_memory_update_tool)
+        .tool(nutrition_analysis_tool)
         .build();
 
     let vy = Vy::new(
