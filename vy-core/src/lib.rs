@@ -219,10 +219,24 @@ pub mod builder {
             ));
         }
 
-        // TODO: Add vector memory tools after fixing Sync issues
+        // Add vector memory tools
+        let vector_memory_config = config.vector_memory.clone();
+
         let agent = agent_builder
             .tool(crate::tools::nutrition_analysis_tool(
                 config.llm_api_key.clone(),
+            ))
+            .tool(crate::tools::vector_memory_search_tool(
+                vector_memory_config.clone(),
+            ))
+            .tool(crate::tools::vector_memory_store_tool(
+                vector_memory_config.clone(),
+            ))
+            .tool(crate::tools::vector_memory_update_tool(
+                vector_memory_config.clone(),
+            ))
+            .tool(crate::tools::vector_memory_remove_tool(
+                vector_memory_config.clone(),
             ))
             .build();
 
@@ -237,7 +251,9 @@ pub mod builder {
     pub async fn build_anthropic_vy(config: &VyConfig) -> Result<VyCore<impl CompletionModel>> {
         let client = AnthropicClient::new(&config.llm_api_key);
 
-        // TODO: Add vector memory tools after fixing Sync issues
+        // Add vector memory tools
+        let vector_memory_config = config.vector_memory.clone();
+
         let agent = CompletionClientDyn::agent(&client, &config.llm_model_id)
             .preamble(&config.system_prompt)
             .tool(crate::tools::google_search(
@@ -246,6 +262,18 @@ pub mod builder {
             ))
             .tool(crate::tools::nutrition_analysis_tool(
                 config.llm_api_key.clone(),
+            ))
+            .tool(crate::tools::vector_memory_search_tool(
+                vector_memory_config.clone(),
+            ))
+            .tool(crate::tools::vector_memory_store_tool(
+                vector_memory_config.clone(),
+            ))
+            .tool(crate::tools::vector_memory_update_tool(
+                vector_memory_config.clone(),
+            ))
+            .tool(crate::tools::vector_memory_remove_tool(
+                vector_memory_config.clone(),
             ))
             .build();
 

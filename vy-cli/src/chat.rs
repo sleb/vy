@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use std::io::{self, Write};
-use vy_core::{VyCore, builder, config::VyConfig};
+use vy_core::{VectorMemory, VyCore, builder, config::VyConfig};
 
 /// Run the CLI chat interface
 pub async fn run_chat(config: &VyConfig) -> Result<()> {
@@ -87,8 +87,11 @@ pub async fn run_chat(config: &VyConfig) -> Result<()> {
         println!(); // Add spacing between exchanges
     }
 
-    // TODO: Re-enable vector memory analysis after fixing Sync issues
-    // vy.analyze_conversation_memories(&vector_memory).await?;
+    // Create vector memory instance for conversation analysis
+    let vector_memory = VectorMemory::new(config.vector_memory.clone()).await?;
+
+    // Analyze conversation for memories
+    vy.analyze_conversation_memories(&vector_memory).await?;
 
     print_goodbye();
     Ok(())

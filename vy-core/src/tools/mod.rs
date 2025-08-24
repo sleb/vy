@@ -5,11 +5,15 @@
 
 pub mod google_search;
 pub mod nutrition_analysis;
-// TODO: Re-enable vector memory tools after fixing Sync issues
-// pub mod vector_memory_tools;
+pub mod vector_memory_tools;
 
 pub use google_search::GoogleSearchTool;
 pub use nutrition_analysis::NutritionAnalysisTool;
+pub use vector_memory_tools::{
+    VectorMemoryRemoveTool, VectorMemorySearchTool, VectorMemoryStoreTool, VectorMemoryUpdateTool,
+    vector_memory_remove_tool, vector_memory_search_tool, vector_memory_store_tool,
+    vector_memory_update_tool,
+};
 
 /// Create a Google search tool instance
 pub fn google_search(api_key: String, search_engine_id: String) -> GoogleSearchTool {
