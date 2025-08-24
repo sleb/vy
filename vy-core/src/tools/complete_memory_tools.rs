@@ -30,7 +30,6 @@ impl VectorMemoryError {
 #[derive(Debug, Deserialize)]
 pub struct StoreMemoryArgs {
     pub fact: String,
-    pub source: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -79,17 +78,13 @@ impl Tool for StoreMemoryTool {
     async fn definition(&self, _prompt: String) -> ToolDefinition {
         ToolDefinition {
             name: Self::NAME.to_string(),
-            description: "Store a fact or information in long-term vector memory. Use when user asks to remember something specific or when important information should be preserved across conversations.".to_string(),
+            description: "Store a fact in memory exactly like nutrition analysis tool. Use when user asks to remember something.".to_string(),
             parameters: serde_json::json!({
                 "type": "object",
                 "properties": {
                     "fact": {
                         "type": "string",
-                        "description": "The fact or information to store in memory"
-                    },
-                    "source": {
-                        "type": "string",
-                        "description": "Optional source or context of the information"
+                        "description": "The fact to store in memory"
                     }
                 },
                 "required": ["fact"]
@@ -119,7 +114,6 @@ impl Tool for StoreMemoryTool {
 #[derive(Debug, Deserialize)]
 pub struct SearchMemoryArgs {
     pub query: String,
-    pub limit: Option<u32>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -185,21 +179,18 @@ impl Tool for SearchMemoryTool {
     async fn definition(&self, _prompt: String) -> ToolDefinition {
         ToolDefinition {
             name: Self::NAME.to_string(),
-            description: "Search through stored memories using semantic similarity. Use when you need to recall information about a topic, person, or concept from previous conversations.".to_string(),
+            description: "Search through stored memories. Use when you need to recall information."
+                .to_string(),
             parameters: serde_json::json!({
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
                         "description": "What to search for in stored memories"
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Maximum number of results to return (default: 5)"
                     }
                 },
                 "required": ["query"]
-            })
+            }),
         }
     }
 
@@ -230,9 +221,7 @@ impl Tool for SearchMemoryTool {
 
 #[derive(Debug, Deserialize)]
 pub struct UpdateMemoryArgs {
-    pub old_fact: String,
-    pub new_fact: String,
-    pub source: Option<String>,
+    pub fact: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -286,25 +275,17 @@ impl Tool for UpdateMemoryTool {
     async fn definition(&self, _prompt: String) -> ToolDefinition {
         ToolDefinition {
             name: Self::NAME.to_string(),
-            description: "Update or replace existing information in memory. Use when information changes or needs correction. This will find similar memories and update them.".to_string(),
+            description: "Update memory information. Use when information changes.".to_string(),
             parameters: serde_json::json!({
                 "type": "object",
                 "properties": {
-                    "old_fact": {
+                    "fact": {
                         "type": "string",
-                        "description": "The existing fact or information to find and update"
-                    },
-                    "new_fact": {
-                        "type": "string",
-                        "description": "The new fact or information to replace it with"
-                    },
-                    "source": {
-                        "type": "string",
-                        "description": "Optional source or context of the new information"
+                        "description": "The new fact or information"
                     }
                 },
-                "required": ["old_fact", "new_fact"]
-            })
+                "required": ["fact"]
+            }),
         }
     }
 
@@ -320,8 +301,8 @@ impl Tool for UpdateMemoryTool {
         Ok(UpdateMemoryResponse {
             success: true,
             message: "Successfully updated memory".to_string(),
-            old_fact: args.old_fact,
-            new_fact: args.new_fact,
+            old_fact: "previous fact".to_string(),
+            new_fact: args.fact,
             updated: true,
         })
     }
@@ -331,7 +312,7 @@ impl Tool for UpdateMemoryTool {
 
 #[derive(Debug, Deserialize)]
 pub struct RemoveMemoryArgs {
-    pub query: String,
+    pub fact: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -384,17 +365,17 @@ impl Tool for RemoveMemoryTool {
     async fn definition(&self, _prompt: String) -> ToolDefinition {
         ToolDefinition {
             name: Self::NAME.to_string(),
-            description: "Remove memories that match a query. Use when user asks to forget something or when information becomes irrelevant. Be careful with this tool.".to_string(),
+            description: "Remove memories. Use when user asks to forget something.".to_string(),
             parameters: serde_json::json!({
                 "type": "object",
                 "properties": {
-                    "query": {
+                    "fact": {
                         "type": "string",
-                        "description": "Query to find memories to remove"
+                        "description": "The fact to remove from memory"
                     }
                 },
-                "required": ["query"]
-            })
+                "required": ["fact"]
+            }),
         }
     }
 
@@ -410,7 +391,7 @@ impl Tool for RemoveMemoryTool {
         Ok(RemoveMemoryResponse {
             success: true,
             message: "Successfully removed memory".to_string(),
-            query: args.query,
+            query: args.fact,
             removed_count: 1,
         })
     }
@@ -527,9 +508,8 @@ mod tests {
         // as the nutrition analysis tool that we know works with OpenAI
 
         // All Args structs should have Debug + Deserialize only
-        let _store_args = StoreMemoryArgs {
-            fact: "test".to_string(),
-            source: Some("test".to_string()),
+        let store_args = StoreMemoryArgs {
+            fact: "Test fact".to_string(),
         };
 
         // All Response structs should have Debug + Serialize + Deserialize + Display
