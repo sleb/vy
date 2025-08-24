@@ -87,10 +87,8 @@ pub async fn run_chat(config: &VyConfig) -> Result<()> {
         println!(); // Add spacing between exchanges
     }
 
-    // Create vector memory instance for conversation analysis
+    // Re-enable conversation analysis with working memory tools
     let vector_memory = VectorMemory::new(config.vector_memory.clone()).await?;
-
-    // Analyze conversation for memories
     vy.analyze_conversation_memories(&vector_memory).await?;
 
     print_goodbye();

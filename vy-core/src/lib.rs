@@ -226,18 +226,17 @@ pub mod builder {
             .tool(crate::tools::nutrition_analysis_tool(
                 config.llm_api_key.clone(),
             ))
-            .tool(crate::tools::vector_memory_search_tool(
+            // Add complete vector memory tools
+            .tool(crate::tools::store_memory_tool(
                 vector_memory_config.clone(),
             ))
-            .tool(crate::tools::vector_memory_store_tool(
+            .tool(crate::tools::search_memory_tool(
                 vector_memory_config.clone(),
             ))
-            .tool(crate::tools::vector_memory_update_tool(
+            .tool(crate::tools::update_memory_tool(
                 vector_memory_config.clone(),
             ))
-            .tool(crate::tools::vector_memory_remove_tool(
-                vector_memory_config.clone(),
-            ))
+            .tool(crate::tools::remove_memory_tool(vector_memory_config))
             .build();
 
         Ok(VyCore::new(
@@ -263,18 +262,17 @@ pub mod builder {
             .tool(crate::tools::nutrition_analysis_tool(
                 config.llm_api_key.clone(),
             ))
-            .tool(crate::tools::vector_memory_search_tool(
+            // Add complete vector memory tools
+            .tool(crate::tools::store_memory_tool(
                 vector_memory_config.clone(),
             ))
-            .tool(crate::tools::vector_memory_store_tool(
+            .tool(crate::tools::search_memory_tool(
                 vector_memory_config.clone(),
             ))
-            .tool(crate::tools::vector_memory_update_tool(
+            .tool(crate::tools::update_memory_tool(
                 vector_memory_config.clone(),
             ))
-            .tool(crate::tools::vector_memory_remove_tool(
-                vector_memory_config.clone(),
-            ))
+            .tool(crate::tools::remove_memory_tool(vector_memory_config))
             .build();
 
         Ok(VyCore::new(

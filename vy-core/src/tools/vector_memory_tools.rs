@@ -677,4 +677,45 @@ mod tests {
 
         println!("All memory tool schemas are valid!");
     }
+
+    #[tokio::test]
+    async fn test_compare_with_working_tool_schema() {
+        // Compare our memory tool schema with the working nutrition analysis tool schema
+        use crate::tools::nutrition_analysis::NutritionAnalysisTool;
+
+        let config = create_test_config();
+        let memory_tool = VectorMemoryStoreTool::new(config);
+        let nutrition_tool = NutritionAnalysisTool::new("test_key".to_string());
+
+        let memory_def = memory_tool.definition("test".to_string()).await;
+        let nutrition_def = nutrition_tool.definition("test".to_string()).await;
+
+        println!("\n=== WORKING NUTRITION TOOL ===");
+        println!("Name: {}", nutrition_def.name);
+        println!("Description: {}", nutrition_def.description);
+        println!(
+            "Parameters: {}",
+            serde_json::to_string_pretty(&nutrition_def.parameters).unwrap()
+        );
+
+        println!("\n=== PROBLEMATIC MEMORY TOOL ===");
+        println!("Name: {}", memory_def.name);
+        println!("Description: {}", memory_def.description);
+        println!(
+            "Parameters: {}",
+            serde_json::to_string_pretty(&memory_def.parameters).unwrap()
+        );
+
+        // Compare structure
+        assert_eq!(memory_def.parameters.get("type").unwrap(), "object");
+        assert_eq!(nutrition_def.parameters.get("type").unwrap(), "object");
+
+        assert!(memory_def.parameters.get("properties").is_some());
+        assert!(nutrition_def.parameters.get("properties").is_some());
+
+        assert!(memory_def.parameters.get("required").is_some());
+        assert!(nutrition_def.parameters.get("required").is_some());
+
+        println!("\n✅ Both tools have identical schema structure!");
+    }
 }

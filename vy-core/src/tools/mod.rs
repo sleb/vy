@@ -1,14 +1,23 @@
 //! Tools for the Vy AI assistant
 //!
 //! This module provides various tools that can be used by the Vy agent,
-//! including Google search and nutrition analysis.
+//! including Google search, nutrition analysis, and vector memory operations.
 
+pub mod complete_memory_tools;
+pub mod exact_copy_memory_tool;
 pub mod google_search;
 pub mod nutrition_analysis;
+pub mod test_memory_tool;
 pub mod vector_memory_tools;
 
+pub use complete_memory_tools::{
+    RemoveMemoryTool, SearchMemoryTool, StoreMemoryTool, UpdateMemoryTool, remove_memory_tool,
+    search_memory_tool, store_memory_tool, update_memory_tool,
+};
+pub use exact_copy_memory_tool::{ExactCopyMemoryTool, exact_copy_memory_tool};
 pub use google_search::GoogleSearchTool;
 pub use nutrition_analysis::NutritionAnalysisTool;
+pub use test_memory_tool::{TestMemoryTool, test_memory_tool};
 pub use vector_memory_tools::{
     VectorMemoryRemoveTool, VectorMemorySearchTool, VectorMemoryStoreTool, VectorMemoryUpdateTool,
     vector_memory_remove_tool, vector_memory_search_tool, vector_memory_store_tool,
