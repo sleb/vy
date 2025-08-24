@@ -219,24 +219,15 @@ pub mod builder {
             ));
         }
 
-        // Add vector memory tools
-        let vector_memory_config = config.vector_memory.clone();
-
         let agent = agent_builder
             .tool(crate::tools::nutrition_analysis_tool(
                 config.llm_api_key.clone(),
             ))
-            // Add complete vector memory tools
-            .tool(crate::tools::store_memory_tool(
-                vector_memory_config.clone(),
-            ))
-            .tool(crate::tools::search_memory_tool(
-                vector_memory_config.clone(),
-            ))
-            .tool(crate::tools::update_memory_tool(
-                vector_memory_config.clone(),
-            ))
-            .tool(crate::tools::remove_memory_tool(vector_memory_config))
+            // Add complete memory tools using API key pattern
+            .tool(crate::tools::store_memory_tool(config.llm_api_key.clone()))
+            .tool(crate::tools::search_memory_tool(config.llm_api_key.clone()))
+            .tool(crate::tools::update_memory_tool(config.llm_api_key.clone()))
+            .tool(crate::tools::remove_memory_tool(config.llm_api_key.clone()))
             .build();
 
         Ok(VyCore::new(
@@ -250,9 +241,6 @@ pub mod builder {
     pub async fn build_anthropic_vy(config: &VyConfig) -> Result<VyCore<impl CompletionModel>> {
         let client = AnthropicClient::new(&config.llm_api_key);
 
-        // Add vector memory tools
-        let vector_memory_config = config.vector_memory.clone();
-
         let agent = CompletionClientDyn::agent(&client, &config.llm_model_id)
             .preamble(&config.system_prompt)
             .tool(crate::tools::google_search(
@@ -262,17 +250,11 @@ pub mod builder {
             .tool(crate::tools::nutrition_analysis_tool(
                 config.llm_api_key.clone(),
             ))
-            // Add complete vector memory tools
-            .tool(crate::tools::store_memory_tool(
-                vector_memory_config.clone(),
-            ))
-            .tool(crate::tools::search_memory_tool(
-                vector_memory_config.clone(),
-            ))
-            .tool(crate::tools::update_memory_tool(
-                vector_memory_config.clone(),
-            ))
-            .tool(crate::tools::remove_memory_tool(vector_memory_config))
+            // Add complete memory tools using API key pattern
+            .tool(crate::tools::store_memory_tool(config.llm_api_key.clone()))
+            .tool(crate::tools::search_memory_tool(config.llm_api_key.clone()))
+            .tool(crate::tools::update_memory_tool(config.llm_api_key.clone()))
+            .tool(crate::tools::remove_memory_tool(config.llm_api_key.clone()))
             .build();
 
         Ok(VyCore::new(
