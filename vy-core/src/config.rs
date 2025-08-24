@@ -1,12 +1,26 @@
 //! Configuration management for Vy Core
 //!
 //! Handles loading, saving, and managing Vy configuration settings.
+//!
+//! ## Vector Memory Configuration
+//!
+//! Vy supports optional vector memory capabilities using Qdrant for semantic search
+//! and cloud synchronization. Vector memory configuration includes:
+//!
+//! - `vector_memory_enabled`: Enable/disable vector memory features
+//! - `vector_memory.qdrant_url`: Qdrant server URL (local or cloud)
+//! - `vector_memory.qdrant_api_key`: API key for Qdrant Cloud (optional for local)
+//! - `vector_memory.collection_name`: Name of the Qdrant collection to use
+//! - `vector_memory.openai_api_key`: OpenAI API key for embeddings
+//! - `vector_memory.embedding_model`: OpenAI embedding model to use
 
 use std::{fs, path::Path};
 
 use anyhow::{Context, Result};
 use config::Config;
 use serde::{Deserialize, Serialize};
+
+use crate::vector_memory::VectorMemoryConfig;
 
 fn default_model_id() -> String {
     "gpt-3.5-turbo".to_string()
@@ -82,6 +96,8 @@ pub struct VyConfig {
     pub system_prompt: String,
     #[serde(default = "default_chat_mode")]
     pub default_chat_mode: String,
+    #[serde(default)]
+    pub vector_memory: VectorMemoryConfig,
 }
 
 /// Load Vy configuration from a file

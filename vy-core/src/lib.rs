@@ -17,7 +17,9 @@ pub mod memory;
 pub mod tools;
 pub mod vector_memory;
 
-use memory::{Memory, default_memory_file};
+// Re-export memory types from vector_memory for compatibility
+pub use crate::memory::MemoryEntry;
+pub use vector_memory::{VectorMemory, VectorMemoryConfig};
 
 /// The core Vy chatbot engine
 ///
@@ -27,23 +29,16 @@ pub struct VyCore<M: CompletionModel> {
     agent: Agent<M>,
     conversation_history: Vec<Message>,
     model_id: String,
-    api_key: String,
     memory_model_id: String,
 }
 
 impl<M: CompletionModel> VyCore<M> {
     /// Create a new Vy core instance
-    pub fn new(
-        agent: Agent<M>,
-        model_id: String,
-        api_key: String,
-        memory_model_id: String,
-    ) -> Self {
+    pub fn new(agent: Agent<M>, model_id: String, memory_model_id: String) -> Self {
         Self {
             agent,
             conversation_history: Vec::new(),
             model_id,
-            api_key,
             memory_model_id,
         }
     }
@@ -92,30 +87,14 @@ impl<M: CompletionModel> VyCore<M> {
         }
     }
 
-    /// Analyze the conversation for memory-worthy information
-    pub async fn analyze_conversation_memories(&self) -> Result<()> {
+    /// Analyze the conversation for memory-worthy information using vector memory
+    pub async fn analyze_conversation_memories(&self, vector_memory: &VectorMemory) -> Result<()> {
         if self.conversation_history.is_empty() {
             log::debug!("No conversation history to analyze");
             return Ok(());
         }
 
         log::debug!("Analyzing conversation for important information...");
-
-        // Get memory file path
-        let memory_file = match default_memory_file() {
-            Ok(path) => path,
-            Err(e) => {
-                log::debug!("Failed to get memory file path: {e}");
-                return Ok(());
-            }
-        };
-
-        // Load existing memory
-        let mut memory = Memory::new(memory_file);
-        if let Err(e) = memory.load().await {
-            log::debug!("Failed to load existing memories: {e}");
-            return Ok(());
-        }
 
         // Collect all user messages from the conversation
         let user_messages: Vec<String> = self
@@ -164,12 +143,11 @@ impl<M: CompletionModel> VyCore<M> {
             return Ok(());
         }
 
-        // Use LLM-based memory analysis for better fact extraction
-        match memory
-            .learn_from_input(
+        // Use vector memory's conversation learning capabilities
+        match vector_memory
+            .learn_from_conversation(
                 &combined_conversation,
-                conversation_id.clone(),
-                &self.api_key,
+                &conversation_id,
                 &self.memory_model_id,
             )
             .await
@@ -241,11 +219,8 @@ pub mod builder {
             ));
         }
 
+        // TODO: Add vector memory tools after fixing Sync issues
         let agent = agent_builder
-            .tool(crate::tools::simple_memory_tool())
-            .tool(crate::tools::memory_store_tool())
-            .tool(crate::tools::memory_remove_tool())
-            .tool(crate::tools::smart_memory_update_tool())
             .tool(crate::tools::nutrition_analysis_tool(
                 config.llm_api_key.clone(),
             ))
@@ -254,46 +229,6 @@ pub mod builder {
         Ok(VyCore::new(
             agent,
             config.llm_model_id.clone(),
-            config.llm_api_key.clone(),
-            config.memory_model_id.clone(),
-        ))
-    }
-
-    /// Build a Vy instance with OpenAI and vector memory
-    pub async fn build_openai_vy_with_vector_memory(
-        config: &VyConfig,
-        vector_config: VectorMemoryConfig,
-    ) -> Result<VyCore<impl CompletionModel>> {
-        let client = OpenAIClient::builder(&config.llm_api_key).build()?;
-
-        // Initialize vector memory
-        let _vector_memory = VectorMemory::new(vector_config).await?;
-
-        let mut agent_builder = CompletionClientDyn::agent(&client, &config.llm_model_id)
-            .preamble(&config.system_prompt);
-
-        // Add tools based on model compatibility
-        if config.llm_model_id != "gpt-5-mini" {
-            agent_builder = agent_builder.tool(crate::tools::google_search(
-                config.google_api_key.clone(),
-                config.google_search_engine_id.clone(),
-            ));
-        }
-
-        let agent = agent_builder
-            .tool(crate::tools::simple_memory_tool())
-            .tool(crate::tools::memory_store_tool())
-            .tool(crate::tools::memory_remove_tool())
-            .tool(crate::tools::smart_memory_update_tool())
-            .tool(crate::tools::nutrition_analysis_tool(
-                config.llm_api_key.clone(),
-            ))
-            .build();
-
-        Ok(VyCore::new(
-            agent,
-            config.llm_model_id.clone(),
-            config.llm_api_key.clone(),
             config.memory_model_id.clone(),
         ))
     }
@@ -302,16 +237,13 @@ pub mod builder {
     pub async fn build_anthropic_vy(config: &VyConfig) -> Result<VyCore<impl CompletionModel>> {
         let client = AnthropicClient::new(&config.llm_api_key);
 
+        // TODO: Add vector memory tools after fixing Sync issues
         let agent = CompletionClientDyn::agent(&client, &config.llm_model_id)
             .preamble(&config.system_prompt)
             .tool(crate::tools::google_search(
                 config.google_api_key.clone(),
                 config.google_search_engine_id.clone(),
             ))
-            .tool(crate::tools::simple_memory_tool())
-            .tool(crate::tools::memory_store_tool())
-            .tool(crate::tools::memory_remove_tool())
-            .tool(crate::tools::smart_memory_update_tool())
             .tool(crate::tools::nutrition_analysis_tool(
                 config.llm_api_key.clone(),
             ))
@@ -320,7 +252,6 @@ pub mod builder {
         Ok(VyCore::new(
             agent,
             config.llm_model_id.clone(),
-            config.llm_api_key.clone(),
             config.memory_model_id.clone(),
         ))
     }

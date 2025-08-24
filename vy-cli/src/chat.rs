@@ -87,8 +87,8 @@ pub async fn run_chat(config: &VyConfig) -> Result<()> {
         println!(); // Add spacing between exchanges
     }
 
-    // Analyze conversation for memories before saying goodbye
-    vy.analyze_conversation_memories().await?;
+    // TODO: Re-enable vector memory analysis after fixing Sync issues
+    // vy.analyze_conversation_memories(&vector_memory).await?;
 
     print_goodbye();
     Ok(())

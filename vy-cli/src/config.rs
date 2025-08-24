@@ -14,6 +14,10 @@ pub enum ConfigKey {
     MemoryModelId,
     MemorySimilarityModelId,
     DefaultChatMode,
+    VectorMemoryQdrantUrl,
+    VectorMemoryQdrantApiKey,
+    VectorMemoryCollectionName,
+    VectorMemoryEmbeddingModel,
 }
 
 impl ConfigKey {
@@ -26,6 +30,10 @@ impl ConfigKey {
             "memory_model_id" => Some(Self::MemoryModelId),
             "memory_similarity_model_id" => Some(Self::MemorySimilarityModelId),
             "default_chat_mode" => Some(Self::DefaultChatMode),
+            "vector_memory_qdrant_url" => Some(Self::VectorMemoryQdrantUrl),
+            "vector_memory_qdrant_api_key" => Some(Self::VectorMemoryQdrantApiKey),
+            "vector_memory_collection_name" => Some(Self::VectorMemoryCollectionName),
+            "vector_memory_embedding_model" => Some(Self::VectorMemoryEmbeddingModel),
             _ => None,
         }
     }
@@ -39,11 +47,18 @@ impl ConfigKey {
             Self::MemoryModelId => "memory_model_id",
             Self::MemorySimilarityModelId => "memory_similarity_model_id",
             Self::DefaultChatMode => "default_chat_mode",
+            Self::VectorMemoryQdrantUrl => "vector_memory_qdrant_url",
+            Self::VectorMemoryQdrantApiKey => "vector_memory_qdrant_api_key",
+            Self::VectorMemoryCollectionName => "vector_memory_collection_name",
+            Self::VectorMemoryEmbeddingModel => "vector_memory_embedding_model",
         }
     }
 
     pub fn is_sensitive(&self) -> bool {
-        matches!(self, Self::LlmApiKey | Self::GoogleApiKey)
+        matches!(
+            self,
+            Self::LlmApiKey | Self::GoogleApiKey | Self::VectorMemoryQdrantApiKey
+        )
     }
 
     pub fn get_value(&self, config: &VyConfig) -> String {
@@ -55,6 +70,14 @@ impl ConfigKey {
             Self::MemoryModelId => config.memory_model_id.clone(),
             Self::MemorySimilarityModelId => config.memory_similarity_model_id.clone(),
             Self::DefaultChatMode => config.default_chat_mode.clone(),
+            Self::VectorMemoryQdrantUrl => config.vector_memory.qdrant_url.clone(),
+            Self::VectorMemoryQdrantApiKey => config
+                .vector_memory
+                .qdrant_api_key
+                .clone()
+                .unwrap_or_default(),
+            Self::VectorMemoryCollectionName => config.vector_memory.collection_name.clone(),
+            Self::VectorMemoryEmbeddingModel => config.vector_memory.embedding_model.clone(),
         }
     }
 
@@ -67,6 +90,13 @@ impl ConfigKey {
             Self::MemoryModelId => config.memory_model_id = value,
             Self::MemorySimilarityModelId => config.memory_similarity_model_id = value,
             Self::DefaultChatMode => config.default_chat_mode = value,
+            Self::VectorMemoryQdrantUrl => config.vector_memory.qdrant_url = value,
+            Self::VectorMemoryQdrantApiKey => {
+                config.vector_memory.qdrant_api_key =
+                    if value.is_empty() { None } else { Some(value) };
+            }
+            Self::VectorMemoryCollectionName => config.vector_memory.collection_name = value,
+            Self::VectorMemoryEmbeddingModel => config.vector_memory.embedding_model = value,
         }
     }
 
@@ -79,6 +109,10 @@ impl ConfigKey {
             ConfigKey::MemoryModelId,
             ConfigKey::MemorySimilarityModelId,
             ConfigKey::DefaultChatMode,
+            ConfigKey::VectorMemoryQdrantUrl,
+            ConfigKey::VectorMemoryQdrantApiKey,
+            ConfigKey::VectorMemoryCollectionName,
+            ConfigKey::VectorMemoryEmbeddingModel,
         ]
     }
 }
@@ -122,9 +156,10 @@ fn run_init(config_path: &Path) -> Result<()> {
         memory_similarity_model_id: "gpt-4o-mini".to_string(),
         system_prompt: default_system_prompt(),
         default_chat_mode: "cli".to_string(),
+        vector_memory: vy_core::vector_memory::VectorMemoryConfig::default(),
     };
 
-    // Prompt for required values
+    // Prompt for required values (excluding vector memory keys which are handled separately)
     for key in ConfigKey::all_keys() {
         match key {
             ConfigKey::LlmApiKey => {
@@ -145,6 +180,11 @@ fn run_init(config_path: &Path) -> Result<()> {
                 let value = prompt_for_value(false)?;
                 key.set_value(&mut config, value);
             }
+            // Skip vector memory keys - handled in dedicated section below
+            ConfigKey::VectorMemoryQdrantUrl
+            | ConfigKey::VectorMemoryQdrantApiKey
+            | ConfigKey::VectorMemoryCollectionName
+            | ConfigKey::VectorMemoryEmbeddingModel => continue,
             _ => {
                 // Optional fields with defaults
                 println!(
@@ -165,6 +205,44 @@ fn run_init(config_path: &Path) -> Result<()> {
             }
         }
     }
+
+    // Collect vector memory configuration (now always enabled)
+    println!("\n🚀 Vector Memory Configuration:");
+    println!("   Vector memory provides semantic search and cloud sync capabilities.");
+    println!("   For cloud setup, get credentials at: https://cloud.qdrant.io/");
+
+    print!("   Qdrant URL (default: http://localhost:6334): ");
+    std::io::stdout().flush()?;
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+    let input = input.trim();
+    if !input.is_empty() {
+        config.vector_memory.qdrant_url = input.to_string();
+    }
+
+    print!("   Qdrant API Key (optional for local, required for cloud): ");
+    std::io::stdout().flush()?;
+    let api_key = prompt_for_value(true)?;
+    if !api_key.is_empty() {
+        config.vector_memory.qdrant_api_key = Some(api_key);
+    }
+
+    print!("   Collection name (default: vy_memories): ");
+    std::io::stdout().flush()?;
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+    let input = input.trim();
+    if !input.is_empty() {
+        config.vector_memory.collection_name = input.to_string();
+    }
+
+    // Set the OpenAI API key for embeddings (same as LLM key)
+    config.vector_memory.openai_api_key = config.llm_api_key.clone();
+
+    println!(
+        "   ✅ Vector memory configured with Qdrant at: {}",
+        config.vector_memory.qdrant_url
+    );
 
     save_config(&config, config_path)?;
 

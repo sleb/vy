@@ -10,10 +10,8 @@ use vy_core::config::{VyConfig, load_config, load_or_create_config};
 
 pub mod chat;
 pub mod config;
-pub mod memory;
 
 pub use config::ConfigAction;
-pub use memory::MemoryCommand;
 
 static DEFAULT_PREFS_PATH: OnceLock<Option<PathBuf>> = OnceLock::new();
 
@@ -54,11 +52,6 @@ enum Commands {
         edit: bool,
         #[clap(subcommand)]
         action: Option<ConfigAction>,
-    },
-    /// Memory management
-    Remember {
-        #[clap(subcommand)]
-        action: MemoryCommand,
     },
 }
 
@@ -107,7 +100,6 @@ impl Cli {
                     })
                 }
             }
-            Commands::Remember { action } => action.clone().run().await,
         }
     }
 

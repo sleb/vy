@@ -23,7 +23,7 @@ use std::collections::HashMap;
 use crate::memory::MemoryEntry;
 
 /// Vector memory configuration
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct VectorMemoryConfig {
     pub qdrant_url: String,
     pub qdrant_api_key: Option<String>,
@@ -198,7 +198,7 @@ impl VectorMemory {
             .await
             .context("Failed to store memory in vector database")?;
 
-        log::debug!("Stored memory with ID: {}", point_id);
+        log::debug!("Stored memory with ID: {point_id}");
         Ok(point_id)
     }
 
