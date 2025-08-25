@@ -12,7 +12,9 @@ pub mod vector_memory_tools;
 
 pub use complete_memory_tools::{
     RemoveMemoryTool, SearchMemoryTool, StoreMemoryTool, UpdateMemoryTool, remove_memory_tool,
-    search_memory_tool, store_memory_tool, update_memory_tool,
+    remove_memory_tool_with_config, search_memory_tool, search_memory_tool_with_config,
+    store_memory_tool, store_memory_tool_with_config, update_memory_tool,
+    update_memory_tool_with_config,
 };
 pub use exact_copy_memory_tool::{ExactCopyMemoryTool, exact_copy_memory_tool};
 pub use google_search::GoogleSearchTool;

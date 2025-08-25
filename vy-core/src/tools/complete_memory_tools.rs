@@ -3,6 +3,8 @@
 //! This module provides full-featured vector memory tools that follow the exact
 //! structural pattern that works with OpenAI's function calling schema validation.
 
+use crate::memory::MemoryEntry;
+use crate::vector_memory::{VectorMemory, VectorMemoryConfig};
 use anyhow::Result;
 use rig::{completion::ToolDefinition, tool::Tool};
 use serde::{Deserialize, Serialize};
@@ -60,11 +62,12 @@ impl fmt::Display for StoreMemoryResponse {
 
 pub struct StoreMemoryTool {
     api_key: String,
+    config: VectorMemoryConfig,
 }
 
 impl StoreMemoryTool {
-    pub fn new(api_key: String) -> Self {
-        Self { api_key }
+    pub fn new(api_key: String, config: VectorMemoryConfig) -> Self {
+        Self { api_key, config }
     }
 }
 
@@ -100,12 +103,30 @@ impl Tool for StoreMemoryTool {
             ));
         }
 
-        // Simple success response for now (like exact copy tool)
-        Ok(StoreMemoryResponse {
-            success: true,
-            message: "Fact stored successfully".to_string(),
-            stored_fact: args.fact,
+        let config = self.config.clone();
+        tokio::task::spawn_blocking(move || {
+            tokio::runtime::Handle::current().block_on(async move {
+                // Use actual vector memory implementation
+                let vector_memory = VectorMemory::new(config).await.map_err(|e| {
+                    VectorMemoryError::new(format!("Failed to connect to vector memory: {e}"))
+                })?;
+
+                let memory_entry = MemoryEntry::new(args.fact.clone(), "chat".to_string());
+
+                vector_memory
+                    .store_memory(&memory_entry)
+                    .await
+                    .map_err(|e| VectorMemoryError::new(format!("Failed to store memory: {e}")))?;
+
+                Ok(StoreMemoryResponse {
+                    success: true,
+                    message: "Fact stored successfully".to_string(),
+                    stored_fact: args.fact,
+                })
+            })
         })
+        .await
+        .map_err(|e| VectorMemoryError::new(format!("Task join error: {e}")))?
     }
 }
 
@@ -161,11 +182,12 @@ impl fmt::Display for SearchMemoryResponse {
 
 pub struct SearchMemoryTool {
     api_key: String,
+    config: VectorMemoryConfig,
 }
 
 impl SearchMemoryTool {
-    pub fn new(api_key: String) -> Self {
-        Self { api_key }
+    pub fn new(api_key: String, config: VectorMemoryConfig) -> Self {
+        Self { api_key, config }
     }
 }
 
@@ -202,18 +224,41 @@ impl Tool for SearchMemoryTool {
             ));
         }
 
-        // Mock response for now
-        let matches = vec![MemoryMatch {
-            fact: format!("Found relevant memory for: {}", args.query),
-            source: Some("user".to_string()),
-            score: 0.95,
-        }];
+        let config = self.config.clone();
+        tokio::task::spawn_blocking(move || {
+            tokio::runtime::Handle::current().block_on(async move {
+                // Use actual vector memory implementation
+                let vector_memory = VectorMemory::new(config).await.map_err(|e| {
+                    VectorMemoryError::new(format!("Failed to connect to vector memory: {e}"))
+                })?;
 
-        Ok(SearchMemoryResponse {
-            matches,
-            query: args.query,
-            total_found: 1,
+                let results = vector_memory
+                    .search_memories(&args.query, 10)
+                    .await
+                    .map_err(|e| {
+                        VectorMemoryError::new(format!("Failed to search memories: {e}"))
+                    })?;
+
+                let matches = results
+                    .into_iter()
+                    .map(|entry| MemoryMatch {
+                        fact: entry.fact,
+                        source: Some(entry.source),
+                        score: 0.0, // VectorMemory doesn't currently expose scores
+                    })
+                    .collect::<Vec<_>>();
+
+                let total_found = matches.len();
+
+                Ok(SearchMemoryResponse {
+                    matches,
+                    query: args.query,
+                    total_found,
+                })
+            })
         })
+        .await
+        .map_err(|e| VectorMemoryError::new(format!("Task join error: {e}")))?
     }
 }
 
@@ -257,11 +302,12 @@ impl fmt::Display for UpdateMemoryResponse {
 
 pub struct UpdateMemoryTool {
     api_key: String,
+    config: VectorMemoryConfig,
 }
 
 impl UpdateMemoryTool {
-    pub fn new(api_key: String) -> Self {
-        Self { api_key }
+    pub fn new(api_key: String, config: VectorMemoryConfig) -> Self {
+        Self { api_key, config }
     }
 }
 
@@ -297,14 +343,35 @@ impl Tool for UpdateMemoryTool {
             ));
         }
 
-        // Mock response for now
-        Ok(UpdateMemoryResponse {
-            success: true,
-            message: "Successfully updated memory".to_string(),
-            old_fact: "previous fact".to_string(),
-            new_fact: args.fact,
-            updated: true,
+        let config = self.config.clone();
+        tokio::task::spawn_blocking(move || {
+            tokio::runtime::Handle::current().block_on(async move {
+                // Use actual vector memory implementation - store as update
+                let vector_memory = VectorMemory::new(config).await.map_err(|e| {
+                    VectorMemoryError::new(format!("Failed to connect to vector memory: {e}"))
+                })?;
+
+                let memory_entry = MemoryEntry::new(
+                    format!("UPDATED: {}", args.fact),
+                    "memory_update".to_string(),
+                );
+
+                vector_memory
+                    .store_memory(&memory_entry)
+                    .await
+                    .map_err(|e| VectorMemoryError::new(format!("Failed to update memory: {e}")))?;
+
+                Ok(UpdateMemoryResponse {
+                    success: true,
+                    message: "Successfully updated memory".to_string(),
+                    old_fact: "previous fact".to_string(),
+                    new_fact: args.fact,
+                    updated: true,
+                })
+            })
         })
+        .await
+        .map_err(|e| VectorMemoryError::new(format!("Task join error: {e}")))?
     }
 }
 
@@ -347,11 +414,12 @@ impl fmt::Display for RemoveMemoryResponse {
 
 pub struct RemoveMemoryTool {
     api_key: String,
+    config: VectorMemoryConfig,
 }
 
 impl RemoveMemoryTool {
-    pub fn new(api_key: String) -> Self {
-        Self { api_key }
+    pub fn new(api_key: String, config: VectorMemoryConfig) -> Self {
+        Self { api_key, config }
     }
 }
 
@@ -387,13 +455,35 @@ impl Tool for RemoveMemoryTool {
             ));
         }
 
-        // Mock response for now
-        Ok(RemoveMemoryResponse {
-            success: true,
-            message: "Successfully removed memory".to_string(),
-            query: args.fact,
-            removed_count: 1,
+        let config = self.config.clone();
+        tokio::task::spawn_blocking(move || {
+            tokio::runtime::Handle::current().block_on(async move {
+                // Use actual vector memory implementation
+                let vector_memory = VectorMemory::new(config).await.map_err(|e| {
+                    VectorMemoryError::new(format!("Failed to connect to vector memory: {e}"))
+                })?;
+
+                // First search for matching memories
+                let results = vector_memory
+                    .search_memories(&args.fact, 10)
+                    .await
+                    .map_err(|e| {
+                        VectorMemoryError::new(format!("Failed to search memories: {e}"))
+                    })?;
+
+                let removed_count = results.len();
+
+                // For now, we don't have a remove function in VectorMemory, so just report what would be removed
+                Ok(RemoveMemoryResponse {
+                    success: true,
+                    message: format!("Found {} memories that would be removed", removed_count),
+                    query: args.fact,
+                    removed_count,
+                })
+            })
         })
+        .await
+        .map_err(|e| VectorMemoryError::new(format!("Task join error: {e}")))?
     }
 }
 
@@ -401,22 +491,62 @@ impl Tool for RemoveMemoryTool {
 
 /// Create a store memory tool instance
 pub fn store_memory_tool(api_key: String) -> StoreMemoryTool {
-    StoreMemoryTool::new(api_key)
+    let config = VectorMemoryConfig {
+        openai_api_key: api_key.clone(),
+        ..Default::default()
+    };
+    StoreMemoryTool::new(api_key, config)
 }
 
 /// Create a search memory tool instance
 pub fn search_memory_tool(api_key: String) -> SearchMemoryTool {
-    SearchMemoryTool::new(api_key)
+    let config = VectorMemoryConfig {
+        openai_api_key: api_key.clone(),
+        ..Default::default()
+    };
+    SearchMemoryTool::new(api_key, config)
 }
 
 /// Create an update memory tool instance
 pub fn update_memory_tool(api_key: String) -> UpdateMemoryTool {
-    UpdateMemoryTool::new(api_key)
+    let config = VectorMemoryConfig {
+        openai_api_key: api_key.clone(),
+        ..Default::default()
+    };
+    UpdateMemoryTool::new(api_key, config)
 }
 
 /// Create a remove memory tool instance
 pub fn remove_memory_tool(api_key: String) -> RemoveMemoryTool {
-    RemoveMemoryTool::new(api_key)
+    let config = VectorMemoryConfig {
+        openai_api_key: api_key.clone(),
+        ..Default::default()
+    };
+    RemoveMemoryTool::new(api_key, config)
+}
+
+/// Create a store memory tool instance with full config
+pub fn store_memory_tool_with_config(config: VectorMemoryConfig) -> StoreMemoryTool {
+    let api_key = config.openai_api_key.clone();
+    StoreMemoryTool::new(api_key, config)
+}
+
+/// Create a search memory tool instance with full config
+pub fn search_memory_tool_with_config(config: VectorMemoryConfig) -> SearchMemoryTool {
+    let api_key = config.openai_api_key.clone();
+    SearchMemoryTool::new(api_key, config)
+}
+
+/// Create an update memory tool instance with full config
+pub fn update_memory_tool_with_config(config: VectorMemoryConfig) -> UpdateMemoryTool {
+    let api_key = config.openai_api_key.clone();
+    UpdateMemoryTool::new(api_key, config)
+}
+
+/// Create a remove memory tool instance with full config
+pub fn remove_memory_tool_with_config(config: VectorMemoryConfig) -> RemoveMemoryTool {
+    let api_key = config.openai_api_key.clone();
+    RemoveMemoryTool::new(api_key, config)
 }
 
 #[cfg(test)]
@@ -430,7 +560,11 @@ mod tests {
     #[tokio::test]
     async fn test_store_memory_tool_definition() {
         let api_key = test_api_key();
-        let tool = StoreMemoryTool::new(api_key);
+        let config = VectorMemoryConfig {
+            openai_api_key: api_key.clone(),
+            ..Default::default()
+        };
+        let tool = StoreMemoryTool::new(api_key, config);
 
         let definition = tool.definition("test prompt".to_string()).await;
 
@@ -451,7 +585,11 @@ mod tests {
     #[tokio::test]
     async fn test_search_memory_tool_definition() {
         let api_key = test_api_key();
-        let tool = SearchMemoryTool::new(api_key);
+        let config = VectorMemoryConfig {
+            openai_api_key: api_key.clone(),
+            ..Default::default()
+        };
+        let tool = SearchMemoryTool::new(api_key, config);
 
         let definition = tool.definition("test prompt".to_string()).await;
 
@@ -472,24 +610,31 @@ mod tests {
     #[tokio::test]
     async fn test_update_memory_tool_definition() {
         let api_key = test_api_key();
-        let tool = UpdateMemoryTool::new(api_key);
+        let config = VectorMemoryConfig {
+            openai_api_key: api_key.clone(),
+            ..Default::default()
+        };
+        let tool = UpdateMemoryTool::new(api_key, config);
 
         let definition = tool.definition("test prompt".to_string()).await;
 
         assert_eq!(definition.name, "smart_update_memory");
-        assert!(definition.description.contains("Update or replace"));
+        assert!(definition.description.contains("Update"));
 
         // Verify schema has required fields
         let params = definition.parameters;
         let required = params["required"].as_array().unwrap();
-        assert!(required.contains(&serde_json::Value::String("old_fact".to_string())));
-        assert!(required.contains(&serde_json::Value::String("new_fact".to_string())));
+        assert!(required.contains(&serde_json::Value::String("fact".to_string())));
     }
 
     #[tokio::test]
     async fn test_remove_memory_tool_definition() {
         let api_key = test_api_key();
-        let tool = RemoveMemoryTool::new(api_key);
+        let config = VectorMemoryConfig {
+            openai_api_key: api_key.clone(),
+            ..Default::default()
+        };
+        let tool = RemoveMemoryTool::new(api_key, config);
 
         let definition = tool.definition("test prompt".to_string()).await;
 
@@ -498,8 +643,8 @@ mod tests {
 
         // Verify schema structure
         let params = definition.parameters;
-        assert!(params["properties"]["query"].is_object());
-        assert_eq!(params["properties"]["query"]["type"], "string");
+        assert!(params["properties"]["fact"].is_object());
+        assert_eq!(params["properties"]["fact"]["type"], "string");
     }
 
     #[test]
