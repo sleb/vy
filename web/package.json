@@ -13,6 +13,7 @@
     "clean": "rm -rf .next out"
   },
   "dependencies": {
+    "@tailwindcss/postcss": "^4.1.12",
     "next": "15.5.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
