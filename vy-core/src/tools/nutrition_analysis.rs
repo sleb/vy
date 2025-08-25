@@ -58,11 +58,10 @@ impl fmt::Display for NutritionAnalysisResponse {
         writeln!(f)?;
         writeln!(f, "**Summary:** {}", self.summary)?;
 
-        if let Some(notes) = &self.notes {
-            if !notes.trim().is_empty() {
+        if let Some(notes) = &self.notes
+            && !notes.trim().is_empty() {
                 writeln!(f, "**Notes:** {notes}")?;
             }
-        }
 
         Ok(())
     }
@@ -80,14 +79,12 @@ impl NutritionAnalysisTool {
     /// Extract JSON from a natural language response that may contain extra text
     fn extract_json_from_response(&self, content: &str) -> Result<String, NutritionAnalysisError> {
         // Look for JSON object boundaries
-        if let Some(start) = content.find('{') {
-            if let Some(end) = content.rfind('}') {
-                if end > start {
+        if let Some(start) = content.find('{')
+            && let Some(end) = content.rfind('}')
+                && end > start {
                     let json_str = &content[start..=end];
                     return Ok(json_str.to_string());
                 }
-            }
-        }
 
         // If no JSON found, try to create a basic structure from natural language
         // This is a simple fallback - look for common patterns
