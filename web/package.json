@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "dev:api": "cd .. && cargo run --bin vy web",
+    "dev:api": "cd .. && vy web",
     "dev:full": "cd .. && ./scripts/dev-web.sh",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf .next out"

@@ -48,7 +48,7 @@ vy chat --tui    # Visual terminal interface
 vy chat --cli    # Classic text interface
 
 # For web interface, start the web server:
-vy web                    # Starts Rust API server on :3001
+vy web                    # Spawns vy-web server process on :3001
 cd web && npm run dev     # Starts Next.js app on :3000
 ```
 
@@ -111,7 +111,7 @@ Modern web application with:
 **To use the web interface:**
 
 ```bash
-# Terminal 1: Start the Rust API server
+# Terminal 1: Start the Rust API server (spawns vy-web process)
 vy web
 
 # Terminal 2: Start the Next.js frontend
@@ -270,9 +270,10 @@ For architecture information, development setup, and contributing guidelines, se
 ```
 vy/
 ├── vy-core/           # Core AI logic and memory
-├── vy-cli/            # Command-line interface (includes web server)
+├── vy-cli/            # Command-line interface
 ├── vy-tui/            # Terminal UI interface
-├── vy/                # Main binary
+├── vy-web/            # Dedicated web API server
+├── vy/                # Main binary (CLI entry point)
 └── web/               # Next.js frontend
     ├── app/           # Next.js 13+ app directory
     ├── components/    # React components
@@ -282,15 +283,19 @@ vy/
 **Development Setup:**
 
 ```bash
-# Install Rust dependencies
-cargo build
+# Build all binaries
+./scripts/build.sh
 
-# Install Node.js dependencies
+# OR build manually:
+cargo build --workspace
 cd web && npm install
 
 # Start development servers
-vy web &                    # API server on :3001
+vy web &                    # Spawns vy-web process on :3001
 cd web && npm run dev       # Frontend on :3000
+
+# OR use the dev script:
+./scripts/dev-web.sh        # Starts both servers
 ```
 
 ---
@@ -302,8 +307,12 @@ cd web && npm run dev       # Frontend on :3000
 vy config init && vy chat
 
 # Or web interface
-vy web &
-cd web && npm run dev
+vy web &                    # Spawns web server
+cd web && npm run dev       # Start frontend
+# Visit http://localhost:3000
+
+# Quick setup with build script:
+./scripts/build.sh --install && vy config init
 ```
 
 Vy learns about you naturally through conversation, making each interaction more helpful than the last! 🧠✨

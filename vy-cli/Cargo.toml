@@ -13,7 +13,6 @@ vy-tui = { path = "../vy-tui" }
 anyhow.workspace = true
 tokio.workspace = true
 log.workspace = true
-env_logger.workspace = true
 chrono.workspace = true
 
 # CLI dependencies
@@ -26,15 +25,8 @@ directories.workspace = true
 # LLM providers
 rig-core.workspace = true
 
-# Web server dependencies (for vy web command)
-axum.workspace = true
-tower.workspace = true
-tower-http.workspace = true
-hyper.workspace = true
-uuid.workspace = true
-dotenvy.workspace = true
-serde.workspace = true
-serde_json.workspace = true
+# Process management for web server spawning
+ctrlc.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

@@ -1,0 +1,32 @@
+[package]
+name = "vy-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+description = "Web API server for the Vy AI chatbot"
+
+[[bin]]
+name = "vy-web"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+env_logger.workspace = true
+
+# Core Vy functionality
+vy-core = { path = "../vy-core" }
+
+# Web server dependencies
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+hyper.workspace = true
+uuid.workspace = true
+
+# Environment and configuration
+dotenvy.workspace = true

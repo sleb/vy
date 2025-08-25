@@ -55,10 +55,10 @@ if ! cargo run --bin vy config list > /dev/null 2>&1; then
     exit 1
 fi
 
-# Build the Rust web server
-print_step "Building Rust web server..."
-if ! cargo build --bin vy-web; then
-    print_error "Failed to build vy-web"
+# Build the Rust binaries
+print_step "Building Rust binaries..."
+if ! cargo build --bin vy --bin vy-web; then
+    print_error "Failed to build Rust binaries"
     exit 1
 fi
 
@@ -70,7 +70,7 @@ if [ ! -d "web/node_modules" ]; then
 fi
 
 print_step "Starting Rust API server on http://localhost:3001..."
-cargo run --bin vy web &
+./target/debug/vy web &
 RUST_PID=$!
 
 # Wait a moment for the server to start
