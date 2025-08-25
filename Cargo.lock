@@ -3156,6 +3156,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "clap",
  "dotenvy",
  "env_logger",
  "hyper",

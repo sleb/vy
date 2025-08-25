@@ -440,6 +440,9 @@ impl Cli {
         println!("   cd web && npm run dev");
         println!();
 
+        // Load the configuration to pass to vy-web
+        let config = self.load_config()?;
+
         // Build command to spawn vy-web
         let mut cmd = Command::new("cargo");
         cmd.args(&["run", "--bin", "vy-web"]);
@@ -447,6 +450,30 @@ impl Cli {
         // Set environment variables for the spawned process
         cmd.env("PORT", port.to_string());
         cmd.env("HOST", &host);
+
+        // Pass all configuration via environment variables
+        cmd.env("VY_LLM_API_KEY", &config.llm_api_key);
+        cmd.env("VY_GOOGLE_API_KEY", &config.google_api_key);
+        cmd.env(
+            "VY_GOOGLE_SEARCH_ENGINE_ID",
+            &config.google_search_engine_id,
+        );
+        cmd.env("VY_LLM_MODEL_ID", &config.llm_model_id);
+        cmd.env("VY_MEMORY_MODEL_ID", &config.memory_model_id);
+        cmd.env(
+            "VY_MEMORY_SIMILARITY_MODEL_ID",
+            &config.memory_similarity_model_id,
+        );
+        cmd.env("VY_SYSTEM_PROMPT", &config.system_prompt);
+        cmd.env("VY_DEFAULT_CHAT_MODE", &config.default_chat_mode);
+        cmd.env("VY_QDRANT_URL", &config.vector_memory.qdrant_url);
+        cmd.env("VY_COLLECTION_NAME", &config.vector_memory.collection_name);
+        cmd.env("VY_EMBEDDING_MODEL", &config.vector_memory.embedding_model);
+
+        // Handle optional qdrant API key
+        if let Some(ref api_key) = config.vector_memory.qdrant_api_key {
+            cmd.env("VY_QDRANT_API_KEY", api_key);
+        }
 
         if verbose {
             cmd.env("RUST_LOG", "debug");
