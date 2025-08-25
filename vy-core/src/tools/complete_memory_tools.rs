@@ -476,7 +476,7 @@ impl Tool for RemoveMemoryTool {
                 // For now, we don't have a remove function in VectorMemory, so just report what would be removed
                 Ok(RemoveMemoryResponse {
                     success: true,
-                    message: format!("Found {} memories that would be removed", removed_count),
+                    message: format!("Found {removed_count} memories that would be removed"),
                     query: args.fact,
                     removed_count,
                 })
@@ -653,7 +653,7 @@ mod tests {
         // as the nutrition analysis tool that we know works with OpenAI
 
         // All Args structs should have Debug + Deserialize only
-        let store_args = StoreMemoryArgs {
+        let _store_args = StoreMemoryArgs {
             fact: "Test fact".to_string(),
         };
 

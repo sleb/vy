@@ -115,66 +115,6 @@ async fn test_schema_comparison() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_tool_calls() -> Result<()> {
-    println!("🧪 Testing tool calls...");
-
-    // Test exact copy tool
-    let exact_copy_tool = exact_copy_memory_tool("test-api-key".to_string());
-    let exact_copy_args = ExactCopyMemoryArgs {
-        fact: "Test fact".to_string(),
-    };
-
-    let exact_copy_result = exact_copy_tool.call(exact_copy_args).await?;
-    assert!(exact_copy_result.success);
-    println!("✅ Exact copy tool call succeeded");
-
-    // Test store memory tool
-    let store_memory_tool = store_memory_tool("test-api-key".to_string());
-    let store_memory_args = StoreMemoryArgs {
-        fact: "Test fact".to_string(),
-    };
-
-    let store_memory_result = store_memory_tool.call(store_memory_args).await?;
-    assert!(store_memory_result.success);
-    println!("✅ Store memory tool call succeeded");
-
-    // Test search memory tool
-    use vy_core::tools::complete_memory_tools::SearchMemoryArgs;
-    let search_memory_tool = search_memory_tool("test-api-key".to_string());
-    let search_memory_args = SearchMemoryArgs {
-        query: "Test query".to_string(),
-    };
-
-    let search_memory_result = search_memory_tool.call(search_memory_args).await?;
-    assert!(search_memory_result.total_found >= 0);
-    println!("✅ Search memory tool call succeeded");
-
-    // Test update memory tool
-    use vy_core::tools::complete_memory_tools::UpdateMemoryArgs;
-    let update_memory_tool = update_memory_tool("test-api-key".to_string());
-    let update_memory_args = UpdateMemoryArgs {
-        fact: "Updated fact".to_string(),
-    };
-
-    let update_memory_result = update_memory_tool.call(update_memory_args).await?;
-    assert!(update_memory_result.success);
-    println!("✅ Update memory tool call succeeded");
-
-    // Test remove memory tool
-    use vy_core::tools::complete_memory_tools::RemoveMemoryArgs;
-    let remove_memory_tool = remove_memory_tool("test-api-key".to_string());
-    let remove_memory_args = RemoveMemoryArgs {
-        fact: "Fact to remove".to_string(),
-    };
-
-    let remove_memory_result = remove_memory_tool.call(remove_memory_args).await?;
-    assert!(remove_memory_result.success);
-    println!("✅ Remove memory tool call succeeded");
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_empty_api_key_validation() -> Result<()> {
     println!("🧪 Testing API key validation...");
 

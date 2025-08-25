@@ -54,14 +54,27 @@ pub struct VectorMemory {
 impl VectorMemory {
     /// Create a new vector memory instance
     pub async fn new(config: VectorMemoryConfig) -> Result<Self> {
-        // Create Qdrant client
+        // Create Qdrant client - try different URL formats for cloud compatibility
+        let client_url = if config.qdrant_url.contains(".cloud.qdrant.io") {
+            // For Qdrant Cloud, try with explicit port 6334 for gRPC
+            if config.qdrant_url.contains(":6334") {
+                config.qdrant_url.clone()
+            } else {
+                format!("{}:6334", config.qdrant_url)
+            }
+        } else {
+            config.qdrant_url.clone()
+        };
+
+        log::debug!("Attempting to connect to Qdrant at: {client_url}");
+
         let client = if let Some(api_key) = &config.qdrant_api_key {
-            Qdrant::from_url(&config.qdrant_url)
+            Qdrant::from_url(&client_url)
                 .api_key(api_key.clone())
                 .build()
                 .context("Failed to create Qdrant client with API key")?
         } else {
-            Qdrant::from_url(&config.qdrant_url)
+            Qdrant::from_url(&client_url)
                 .build()
                 .context("Failed to create Qdrant client")?
         };
