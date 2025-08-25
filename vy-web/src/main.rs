@@ -79,7 +79,7 @@ fn load_config_from_env() -> anyhow::Result<VyConfig> {
         vector_memory: VectorMemoryConfig {
             qdrant_url: get_optional_env("VY_QDRANT_URL")
                 .unwrap_or_else(|| "http://localhost:6333".to_string()),
-            qdrant_api_key: get_optional_env("VY_QDRANT_API_KEY"),
+            qdrant_api_key: get_optional_env("VY_QDRANT_API_KEY"), // Only this is truly optional (for local Qdrant)
             collection_name: get_optional_env("VY_COLLECTION_NAME")
                 .unwrap_or_else(|| "vy_memories".to_string()),
             openai_api_key: llm_api_key.clone(),

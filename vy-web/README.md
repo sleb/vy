@@ -5,6 +5,7 @@ The `vy-web` binary provides a standalone web API server for Vy, designed to be 
 ## Architecture
 
 `vy-web` receives all configuration via environment variables, making it:
+
 - **Stateless**: No dependency on config files or filesystem state
 - **Portable**: Can run in any directory or container environment
 - **Secure**: API keys passed via environment variables (not visible in process lists)
@@ -20,6 +21,7 @@ vy web
 ```
 
 This command:
+
 1. Loads your project's `vy.toml` configuration
 2. Spawns `vy-web` with all necessary environment variables
 3. Handles process management and signal forwarding
@@ -65,26 +67,31 @@ vy-web --help
 
 ### Required
 
-| Variable | Description |
-|----------|-------------|
+| Variable         | Description                              |
+| ---------------- | ---------------------------------------- |
 | `VY_LLM_API_KEY` | OpenAI API key for language model access |
 
-### Optional
+### Core Configuration (with defaults)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VY_GOOGLE_API_KEY` | *(empty)* | Google API key for web search |
-| `VY_GOOGLE_SEARCH_ENGINE_ID` | *(empty)* | Google Custom Search Engine ID |
-| `VY_LLM_MODEL_ID` | `gpt-4o-mini` | Primary language model |
-| `VY_MEMORY_MODEL_ID` | `gpt-4o-mini` | Model for memory processing |
-| `VY_MEMORY_SIMILARITY_MODEL_ID` | `gpt-4o-mini` | Model for similarity analysis |
-| `VY_DEFAULT_CHAT_MODE` | `cli` | Default chat interface mode |
-| `VY_QDRANT_URL` | `http://localhost:6333` | Qdrant vector database URL |
-| `VY_QDRANT_API_KEY` | *(none)* | Qdrant API key (for cloud instances) |
-| `VY_COLLECTION_NAME` | `vy_memories` | Vector memory collection name |
-| `VY_EMBEDDING_MODEL` | `text-embedding-3-small` | Text embedding model |
-| `PORT` | `3001` | Server port |
-| `HOST` | `0.0.0.0` | Server host/bind address |
+| Variable                        | Default                  | Description                   |
+| ------------------------------- | ------------------------ | ----------------------------- |
+| `VY_LLM_MODEL_ID`               | `gpt-4o-mini`            | Primary language model        |
+| `VY_MEMORY_MODEL_ID`            | `gpt-4o-mini`            | Model for memory processing   |
+| `VY_MEMORY_SIMILARITY_MODEL_ID` | `gpt-4o-mini`            | Model for similarity analysis |
+| `VY_DEFAULT_CHAT_MODE`          | `cli`                    | Default chat interface mode   |
+| `VY_QDRANT_URL`                 | `http://localhost:6333`  | Qdrant vector database URL    |
+| `VY_COLLECTION_NAME`            | `vy_memories`            | Vector memory collection name |
+| `VY_EMBEDDING_MODEL`            | `text-embedding-3-small` | Text embedding model          |
+| `PORT`                          | `3001`                   | Server port                   |
+| `HOST`                          | `0.0.0.0`                | Server host/bind address      |
+
+### Optional Features
+
+| Variable                     | Default   | Description                                                    |
+| ---------------------------- | --------- | -------------------------------------------------------------- |
+| `VY_GOOGLE_API_KEY`          | _(empty)_ | Google API key for web search                                  |
+| `VY_GOOGLE_SEARCH_ENGINE_ID` | _(empty)_ | Google Custom Search Engine ID                                 |
+| `VY_QDRANT_API_KEY`          | _(none)_  | Qdrant API key (only needed for cloud/authenticated instances) |
 
 ## Deployment
 
