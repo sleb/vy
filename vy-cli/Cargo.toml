@@ -26,5 +26,15 @@ directories.workspace = true
 # LLM providers
 rig-core.workspace = true
 
+# Web server dependencies (for vy web command)
+axum.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+hyper.workspace = true
+uuid.workspace = true
+dotenvy.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
 [dev-dependencies]
 tempfile.workspace = true

@@ -6,7 +6,7 @@ Vy is a sophisticated AI assistant built in Rust that remembers your conversatio
 
 - **🧠 Persistent Memory**: Automatically learns and remembers information about you across conversations
 - **🔍 Real-time Search**: Google search integration for current information
-- **🖥️ Multiple Interfaces**: Choose between TUI (visual) or CLI (text-based) modes
+- **🖥️ Multiple Interfaces**: Choose between Web (mobile-first), TUI (visual), or CLI (text-based) modes
 - **📊 Nutrition Analysis**: Analyze meal photos for ingredient breakdown
 - **⚙️ Configurable**: Support for various OpenAI models and customizable settings
 - **🛡️ Privacy-First**: All memories stored locally or in your private cloud instance
@@ -46,6 +46,10 @@ vy chat
 # Or force a specific mode
 vy chat --tui    # Visual terminal interface
 vy chat --cli    # Classic text interface
+
+# For web interface, start the web server:
+vy web                    # Starts Rust API server on :3001
+cd web && npm run dev     # Starts Next.js app on :3000
 ```
 
 That's it! Vy will start learning about you from your first conversation.
@@ -94,9 +98,31 @@ your work you'd like to discuss?
 
 ## 🖥️ Interface Options
 
-### TUI Mode (Recommended)
+### Web Interface (Mobile-First)
 
-Modern, visual interface with:
+Modern web application with:
+
+- **📱 Mobile-optimized**: PWA support, touch-friendly design
+- **🔄 Real-time chat**: Instant messaging experience
+- **🌙 Modern UI**: Tailwind CSS with dark/light mode
+- **📶 Offline ready**: Progressive Web App capabilities
+- **🔔 Push notifications**: Stay connected (coming soon)
+
+**To use the web interface:**
+
+```bash
+# Terminal 1: Start the Rust API server
+vy web
+
+# Terminal 2: Start the Next.js frontend
+cd web && npm run dev
+
+# Visit http://localhost:3000 in your browser
+```
+
+### TUI Mode
+
+Visual terminal interface with:
 
 - Full-screen layout with scrollable chat history
 - Color-coded messages (green for you, blue for Vy)
@@ -115,7 +141,7 @@ Classic text-based interface:
 **Set your preferred default:**
 
 ```bash
-vy config set default_chat_mode tui  # or 'cli'
+vy config set default_chat_mode web  # 'web', 'tui', or 'cli'
 ```
 
 ## ⚙️ Configuration
@@ -239,10 +265,45 @@ For architecture information, development setup, and contributing guidelines, se
 
 ---
 
+## 🏗️ Project Structure
+
+```
+vy/
+├── vy-core/           # Core AI logic and memory
+├── vy-cli/            # Command-line interface (includes web server)
+├── vy-tui/            # Terminal UI interface
+├── vy/                # Main binary
+└── web/               # Next.js frontend
+    ├── app/           # Next.js 13+ app directory
+    ├── components/    # React components
+    └── public/        # Static assets
+```
+
+**Development Setup:**
+
+```bash
+# Install Rust dependencies
+cargo build
+
+# Install Node.js dependencies
+cd web && npm install
+
+# Start development servers
+vy web &                    # API server on :3001
+cd web && npm run dev       # Frontend on :3000
+```
+
+---
+
 **Start having smarter conversations today:**
 
 ```bash
+# Terminal setup
 vy config init && vy chat
+
+# Or web interface
+vy web &
+cd web && npm run dev
 ```
 
 Vy learns about you naturally through conversation, making each interaction more helpful than the last! 🧠✨
