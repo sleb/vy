@@ -665,7 +665,7 @@ mod tests {
         };
 
         // Verify Display implementation works
-        let display_output = format!("{}", store_response);
+        let display_output = format!("{store_response}");
         assert!(display_output.contains("Memory Storage Results"));
         assert!(display_output.contains("✅ Success"));
     }

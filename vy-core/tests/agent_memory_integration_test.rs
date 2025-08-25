@@ -37,7 +37,7 @@ async fn test_openai_agent_builds_with_memory_tools() {
     let result = build_openai_vy(&config).await;
 
     match result {
-        Ok(agent) => {
+        Ok(_agent) => {
             println!("✅ OpenAI agent built successfully with memory tools");
             println!("   - Memory tools integrated without schema errors");
         }
@@ -50,14 +50,10 @@ async fn test_openai_agent_builds_with_memory_tools() {
                 !error_msg.contains("Invalid schema")
                     && !error_msg.contains("required")
                     && !error_msg.contains("properties"),
-                "Schema validation error detected: {}",
-                error_msg
+                "Schema validation error detected: {error_msg}"
             );
 
-            println!(
-                "✅ OpenAI agent build failed as expected (API key issue): {}",
-                error_msg
-            );
+            println!("✅ OpenAI agent build failed as expected (API key issue): {error_msg}");
         }
     }
 }
@@ -70,7 +66,7 @@ async fn test_anthropic_agent_builds_with_memory_tools() {
     let result = build_anthropic_vy(&config).await;
 
     match result {
-        Ok(agent) => {
+        Ok(_agent) => {
             println!("✅ Anthropic agent built successfully with memory tools");
             println!("   - Memory tools integrated without schema errors");
         }
@@ -83,14 +79,10 @@ async fn test_anthropic_agent_builds_with_memory_tools() {
                 !error_msg.contains("Invalid schema")
                     && !error_msg.contains("required")
                     && !error_msg.contains("properties"),
-                "Schema validation error detected: {}",
-                error_msg
+                "Schema validation error detected: {error_msg}"
             );
 
-            println!(
-                "✅ Anthropic agent build failed as expected (API key issue): {}",
-                error_msg
-            );
+            println!("✅ Anthropic agent build failed as expected (API key issue): {error_msg}");
         }
     }
 }
@@ -198,12 +190,10 @@ async fn test_memory_tools_use_real_implementation() {
                 error_msg.contains("Failed to connect")
                     || error_msg.contains("qdrant")
                     || error_msg.contains("Task join error"),
-                "Unexpected error (might be using mock implementation): {}",
-                error_msg
+                "Unexpected error (might be using mock implementation): {error_msg}"
             );
             println!(
-                "✅ Memory tool correctly attempted real vector memory connection: {}",
-                error_msg
+                "✅ Memory tool correctly attempted real vector memory connection: {error_msg}"
             );
         }
     }

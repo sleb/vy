@@ -548,7 +548,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&args).unwrap();
-        println!("VectorMemorySearchArgs JSON: {}", json);
+        println!("VectorMemorySearchArgs JSON: {json}");
 
         // Test deserialization
         let _deserialized: VectorMemorySearchArgs = serde_json::from_str(&json).unwrap();
@@ -562,7 +562,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&args).unwrap();
-        println!("VectorMemoryStoreArgs JSON: {}", json);
+        println!("VectorMemoryStoreArgs JSON: {json}");
 
         // Test deserialization
         let _deserialized: VectorMemoryStoreArgs = serde_json::from_str(&json).unwrap();
@@ -576,7 +576,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&args).unwrap();
-        println!("VectorMemoryUpdateArgs JSON: {}", json);
+        println!("VectorMemoryUpdateArgs JSON: {json}");
 
         // Test deserialization
         let _deserialized: VectorMemoryUpdateArgs = serde_json::from_str(&json).unwrap();
@@ -590,7 +590,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&args).unwrap();
-        println!("VectorMemoryRemoveArgs JSON: {}", json);
+        println!("VectorMemoryRemoveArgs JSON: {json}");
 
         // Test deserialization
         let _deserialized: VectorMemoryRemoveArgs = serde_json::from_str(&json).unwrap();

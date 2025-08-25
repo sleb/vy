@@ -36,7 +36,7 @@ async fn main() -> Result<()> {
             memory
         }
         Err(e) => {
-            eprintln!("❌ Failed to connect to Qdrant: {}", e);
+            eprintln!("❌ Failed to connect to Qdrant: {e}");
             eprintln!("💡 Make sure Qdrant is running: docker run -p 6334:6334 qdrant/qdrant");
             return Err(e);
         }
@@ -76,7 +76,7 @@ async fn main() -> Result<()> {
     for memory in &demo_memories {
         match vector_memory.store_memory(memory).await {
             Ok(id) => println!("  ✅ Stored: {} (ID: {})", memory.fact, id),
-            Err(e) => println!("  ❌ Failed to store memory: {}", e),
+            Err(e) => println!("  ❌ Failed to store memory: {e}"),
         }
     }
     println!();
@@ -94,7 +94,7 @@ async fn main() -> Result<()> {
     println!("🔍 Demonstrating semantic search...\n");
 
     for query in search_queries {
-        println!("🔎 Searching for: '{}'", query);
+        println!("🔎 Searching for: '{query}'");
 
         match vector_memory.search_memories(query, 3).await {
             Ok(results) => {
@@ -113,7 +113,7 @@ async fn main() -> Result<()> {
                 }
             }
             Err(e) => {
-                println!("  ❌ Search failed: {}\n", e);
+                println!("  ❌ Search failed: {e}\n");
             }
         }
     }
@@ -125,7 +125,7 @@ async fn main() -> Result<()> {
             println!("{}", stats.to_display_string());
         }
         Err(e) => {
-            println!("❌ Failed to get stats: {}", e);
+            println!("❌ Failed to get stats: {e}");
         }
     }
 

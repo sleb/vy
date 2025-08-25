@@ -3,10 +3,7 @@
 //! Tests that the memory tools can actually store and retrieve information
 //! using the vector memory system, not just schema validation.
 
-use anyhow::Result;
 use rig::tool::Tool;
-use serde_json;
-use vy_core::config::VyConfig;
 use vy_core::tools::{
     RemoveMemoryTool, SearchMemoryTool, StoreMemoryTool, UpdateMemoryTool,
     remove_memory_tool_with_config, search_memory_tool_with_config, store_memory_tool_with_config,
@@ -30,10 +27,10 @@ async fn test_memory_tools_can_be_created_with_config() {
     let config = test_vector_config();
 
     // Test that all tools can be created without panicking
-    let store_tool = store_memory_tool_with_config(config.clone());
-    let search_tool = search_memory_tool_with_config(config.clone());
-    let update_tool = update_memory_tool_with_config(config.clone());
-    let remove_tool = remove_memory_tool_with_config(config.clone());
+    let _store_tool = store_memory_tool_with_config(config.clone());
+    let _search_tool = search_memory_tool_with_config(config.clone());
+    let _update_tool = update_memory_tool_with_config(config.clone());
+    let _remove_tool = remove_memory_tool_with_config(config.clone());
 
     // Verify tool names are correct
     assert_eq!(StoreMemoryTool::NAME, "store_memory");
@@ -121,13 +118,9 @@ async fn test_memory_storage_without_qdrant() {
                     || error_msg.contains("connection")
                     || error_msg.contains("qdrant")
                     || error_msg.contains("Task join error"),
-                "Unexpected error type: {}",
-                error_msg
+                "Unexpected error type: {error_msg}"
             );
-            println!(
-                "✅ Memory storage failed as expected (no Qdrant): {}",
-                error_msg
-            );
+            println!("✅ Memory storage failed as expected (no Qdrant): {error_msg}");
         }
     }
 }
@@ -153,7 +146,7 @@ async fn test_memory_search_without_qdrant() {
             // If successful, verify the response structure
             assert!(!response.query.is_empty());
             assert_eq!(response.query, "Scott");
-            assert!(response.total_found >= 0); // Should be >= 0
+            // total_found is unsigned, so always >= 0
             println!(
                 "✅ Memory search succeeded: found {} memories",
                 response.total_found
@@ -167,13 +160,9 @@ async fn test_memory_search_without_qdrant() {
                     || error_msg.contains("connection")
                     || error_msg.contains("qdrant")
                     || error_msg.contains("Task join error"),
-                "Unexpected error type: {}",
-                error_msg
+                "Unexpected error type: {error_msg}"
             );
-            println!(
-                "✅ Memory search failed as expected (no Qdrant): {}",
-                error_msg
-            );
+            println!("✅ Memory search failed as expected (no Qdrant): {error_msg}");
         }
     }
 }
@@ -203,13 +192,9 @@ async fn test_memory_update_without_qdrant() {
                     || error_msg.contains("connection")
                     || error_msg.contains("qdrant")
                     || error_msg.contains("Task join error"),
-                "Unexpected error type: {}",
-                error_msg
+                "Unexpected error type: {error_msg}"
             );
-            println!(
-                "✅ Memory update failed as expected (no Qdrant): {}",
-                error_msg
-            );
+            println!("✅ Memory update failed as expected (no Qdrant): {error_msg}");
         }
     }
 }
@@ -240,13 +225,9 @@ async fn test_memory_remove_without_qdrant() {
                     || error_msg.contains("connection")
                     || error_msg.contains("qdrant")
                     || error_msg.contains("Task join error"),
-                "Unexpected error type: {}",
-                error_msg
+                "Unexpected error type: {error_msg}"
             );
-            println!(
-                "✅ Memory remove failed as expected (no Qdrant): {}",
-                error_msg
-            );
+            println!("✅ Memory remove failed as expected (no Qdrant): {error_msg}");
         }
     }
 }
@@ -282,7 +263,7 @@ async fn test_memory_full_workflow_with_qdrant() {
     let store_args: <StoreMemoryTool as Tool>::Args = serde_json::from_value(store_args).unwrap();
 
     let store_result = store_tool.call(store_args).await;
-    assert!(store_result.is_ok(), "Store failed: {:?}", store_result);
+    assert!(store_result.is_ok(), "Store failed: {store_result:?}");
 
     let store_response = store_result.unwrap();
     assert!(store_response.success);
@@ -299,7 +280,7 @@ async fn test_memory_full_workflow_with_qdrant() {
         serde_json::from_value(search_args).unwrap();
 
     let search_result = search_tool.call(search_args).await;
-    assert!(search_result.is_ok(), "Search failed: {:?}", search_result);
+    assert!(search_result.is_ok(), "Search failed: {search_result:?}");
 
     let search_response = search_result.unwrap();
     assert!(search_response.total_found > 0);
@@ -342,5 +323,5 @@ async fn test_memory_error_handling() {
             || error_msg.contains("Task join error")
     );
 
-    println!("✅ Error handling works correctly: {}", error_msg);
+    println!("✅ Error handling works correctly: {error_msg}");
 }

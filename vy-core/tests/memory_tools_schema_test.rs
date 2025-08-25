@@ -256,16 +256,15 @@ async fn test_agent_initialization_with_memory_tools() -> Result<()> {
             println!("✅ Agent built successfully (unexpected but good!)");
         }
         Err(e) => {
-            let error_message = format!("{}", e);
+            let error_message = format!("{e}");
             // Check that it's NOT a schema validation error
             if error_message.contains("Invalid schema")
                 || error_message.contains("required is required")
             {
-                panic!("❌ Schema validation error detected: {}", error_message);
+                panic!("❌ Schema validation error detected: {error_message}");
             } else {
                 println!(
-                    "✅ Agent failed with non-schema error (expected): {}",
-                    error_message
+                    "✅ Agent failed with non-schema error (expected): {error_message}"
                 );
                 println!("   This means schema validation passed successfully!");
             }
