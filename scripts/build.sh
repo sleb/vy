@@ -152,11 +152,11 @@ echo ""
 print_status "Quick start:"
 if [ "$INSTALL_SYSTEM" = true ]; then
     echo "  vy config init    # Set up configuration"
-    echo "  vy chat           # Start CLI/TUI chat"
+    echo "  vy chat           # Start CLI chat"
     echo "  vy web            # Start web server"
 else
     echo "  $TARGET_DIR/vy config init    # Set up configuration"
-    echo "  $TARGET_DIR/vy chat           # Start CLI/TUI chat"
+    echo "  $TARGET_DIR/vy chat           # Start CLI chat"
     echo "  $TARGET_DIR/vy web            # Start web server"
 fi
 echo ""

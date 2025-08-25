@@ -32,7 +32,6 @@ Vy uses a modular workspace architecture with clear separation of concerns:
 vy/
 ├── vy-core/           # Core AI logic, memory system, tools
 ├── vy-cli/            # Command-line interface implementation
-├── vy-tui/            # Terminal user interface implementation
 ├── vy/                # Main binary that coordinates interfaces
 └── Cargo.toml         # Workspace configuration
 ```
@@ -58,21 +57,11 @@ Classic text-based interface providing:
 - **Memory management**: `vy remember list/search/add/clear`
 - **Error presentation**: User-friendly error formatting
 
-#### `vy-tui` - Terminal User Interface
-
-Modern visual interface featuring:
-
-- **Full-screen layout**: Scrollable chat history with status bar
-- **Real-time updates**: Live typing indicators and message streaming
-- **Keyboard navigation**: F1 help, arrow key scrolling, Esc to exit
-- **Color-coded messages**: Visual distinction between user/AI/system messages
-
 #### `vy` - Main Binary
 
 Coordination layer that:
 
 - **Parses command-line arguments**: Routes to appropriate interface
-- **Handles interface selection**: CLI vs TUI mode switching
 - **Manages shared resources**: Configuration loading, error handling
 - **Provides unified CLI**: Single `vy` command for all functionality
 
@@ -127,12 +116,6 @@ vy-cli/src/
 ├── config.rs           # Configuration subcommands
 ├── memory.rs           # Memory management commands
 └── error.rs            # CLI-specific error formatting
-
-vy-tui/src/
-├── lib.rs              # TUI application and event loop
-├── ui.rs               # Layout and rendering
-├── input.rs            # Input handling and history
-└── events.rs           # Keyboard and terminal events
 
 vy/src/
 └── main.rs             # Command parsing and interface routing
@@ -261,7 +244,6 @@ cargo test --package vy-core
 
 # Interface tests
 cargo test --package vy-cli
-cargo test --package vy-tui
 
 # Integration tests
 cargo test --package vy
@@ -390,7 +372,6 @@ impl WebInterface {
 
 ### Interface Optimization
 
-- **TUI rendering**: Minimal screen updates, efficient layouts
 - **CLI streaming**: Real-time response streaming for long outputs
 - **Error recovery**: Graceful degradation when services unavailable
 
@@ -468,7 +449,6 @@ cargo test --all-features
 - **OpenAI API Documentation**: https://platform.openai.com/docs
 - **Qdrant Vector Database**: https://qdrant.tech/documentation/
 - **Rust Async Programming**: https://rust-lang.github.io/async-book/
-- **TUI Development**: https://github.com/ratatui-org/ratatui
 
 ---
 

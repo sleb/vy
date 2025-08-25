@@ -235,7 +235,7 @@ async fn test_agent_initialization_with_memory_tools() -> Result<()> {
         llm_model_id: "gpt-4o-mini".to_string(),
         memory_model_id: "gpt-4o-mini".to_string(),
         memory_similarity_model_id: "gpt-4o-mini".to_string(),
-        default_chat_mode: "tui".to_string(),
+        default_chat_mode: "cli".to_string(),
         system_prompt: "You are Vy, a helpful AI assistant.".to_string(),
         vector_memory: vy_core::vector_memory::VectorMemoryConfig {
             qdrant_url: "https://test.qdrant.io".to_string(),

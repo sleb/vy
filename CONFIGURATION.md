@@ -199,7 +199,7 @@ vy config list --keys
 - `llm_model_id` - Main AI model
 - `memory_model_id` - Memory processing model
 - `memory_similarity_model_id` - Memory similarity search model
-- `default_chat_mode` - Interface preference (`cli`, `tui`, `web`)
+- `default_chat_mode` - Interface preference (`cli`, `web`)
 - `system_prompt` - AI personality and instructions
 
 ### Vector Memory Settings

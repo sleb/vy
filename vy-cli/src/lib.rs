@@ -36,15 +36,8 @@ pub struct Cli {
 
 #[derive(Debug, clap::Subcommand)]
 enum Commands {
-    /// Start the chatbot (default: from config, use --tui/--cli to override)
-    Chat {
-        /// Use TUI (Terminal User Interface) mode - modern full-screen interface with real-time chat
-        #[clap(long)]
-        tui: bool,
-        /// Use CLI mode - classic text-based interface
-        #[clap(long)]
-        cli: bool,
-    },
+    /// Start the chatbot
+    Chat,
     /// Start the web server for the browser-based interface
     Web {
         /// Port to run the web server on
@@ -107,29 +100,9 @@ enum MemoryAction {
 impl Cli {
     pub async fn run(&self) -> Result<()> {
         match &self.command {
-            Commands::Chat { tui, cli } => {
+            Commands::Chat => {
                 let config = self.load_config()?;
-
-                // Determine which mode to use
-                let use_tui = if *tui && *cli {
-                    // Both flags specified - show error
-                    anyhow::bail!(
-                        "Cannot specify both --tui and --cli flags. Choose one or rely on default configuration."
-                    );
-                } else if *tui {
-                    true
-                } else if *cli {
-                    false
-                } else {
-                    // No explicit flag, use configuration default
-                    config.default_chat_mode == "tui"
-                };
-
-                if use_tui {
-                    vy_tui::run_tui(&config).await
-                } else {
-                    chat::run_chat(&config).await
-                }
+                chat::run_chat(&config).await
             }
             Commands::Web {
                 port,

@@ -8,7 +8,6 @@ description = "Command-line interface for the Vy AI chatbot"
 
 [dependencies]
 vy-core = { path = "../vy-core" }
-vy-tui = { path = "../vy-tui" }
 
 anyhow.workspace = true
 tokio.workspace = true

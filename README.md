@@ -2,13 +2,13 @@
 
 > ⚠️ **PRE-ALPHA SOFTWARE** - Vy is in active development with rapid iteration. Expect breaking changes, evolving APIs, and frequent updates. This project currently prioritizes clean, maintainable code over backward compatibility.
 
-Vy is a sophisticated AI assistant built in Rust that remembers your conversations and provides intelligent, personalized responses. Choose between a modern Terminal User Interface (TUI) or classic Command Line Interface (CLI) to chat naturally with AI that gets to know you over time.
+Vy is a sophisticated AI assistant built in Rust that remembers your conversations and provides intelligent, personalized responses. Choose between Web (mobile-first) or CLI (text-based) interfaces to chat naturally with AI that gets to know you over time.
 
 ## ✨ Key Features
 
 - **🧠 Persistent Memory**: Automatically learns and remembers information about you across conversations
 - **🔍 Real-time Search**: Google search integration for current information
-- **🖥️ Multiple Interfaces**: Choose between Web (mobile-first), TUI (visual), or CLI (text-based) modes
+- **🖥️ Multiple Interfaces**: Choose between Web (mobile-first) or CLI (text-based) modes
 - **📊 Nutrition Analysis**: Analyze meal photos for ingredient breakdown
 - **⚙️ Configurable**: Support for various OpenAI models and customizable settings
 - **🛡️ Privacy-First**: All memories stored locally or in your private cloud instance
@@ -56,12 +56,8 @@ All API keys are mandatory with no defaults. The system will guide you through o
 ### 3. Start Chatting
 
 ```bash
-# Launch with your preferred interface
+# Launch the CLI chat interface
 vy chat
-
-# Or force a specific mode
-vy chat --tui    # Visual terminal interface
-vy chat --cli    # Classic text interface
 
 # For web interface, start the web server:
 vy web                    # Spawns vy-web server process on :3001
@@ -136,28 +132,19 @@ cd web && npm run dev
 # Visit http://localhost:3000 in your browser
 ```
 
-### TUI Mode
-
-Visual terminal interface with:
-
-- Full-screen layout with scrollable chat history
-- Color-coded messages (green for you, blue for Vy)
-- Live status indicators and help system (F1)
-- Keyboard navigation (↑↓ for scrolling, Esc to exit)
-
 ### CLI Mode
 
-Classic text-based interface:
+Text-based conversation interface:
 
 - Simple line-by-line conversation
 - Works on any terminal
 - Minimal resource usage
-- Perfect for automation or limited terminals
+- Perfect for automation or scripting
 
 **Set your preferred default:**
 
 ```bash
-vy config set default_chat_mode web  # 'web', 'tui', or 'cli'
+vy config set default_chat_mode web  # 'web' or 'cli'
 ```
 
 ## ⚙️ Configuration
@@ -280,7 +267,7 @@ vy config get llm_api_key
 - Check internet connection for cloud memory storage
 - Try explicit memory commands: "Remember exactly: [fact]"
 
-**TUI display issues?**
+**Display issues?**
 
 - Try resizing your terminal window
 - Use `vy chat --cli` as fallback
@@ -315,7 +302,6 @@ This allows us to build the best possible foundation without being constrained b
 vy/
 ├── vy-core/           # Core AI logic and memory
 ├── vy-cli/            # Command-line interface
-├── vy-tui/            # Terminal UI interface
 ├── vy-web/            # Dedicated web API server
 ├── vy/                # Main binary (CLI entry point)
 └── web/               # Next.js frontend

@@ -38,7 +38,7 @@ This document tracks Vy's development status, current capabilities, known limita
 - ✅ **AI Conversations** - OpenAI GPT model integration with tool calling
 - ✅ **Persistent Memory** - Vector-based semantic memory with Qdrant
 - ✅ **Google Search Integration** - Real-time web search capabilities
-- ✅ **Multiple Interfaces** - CLI, TUI, and Web interfaces
+- ✅ **Multiple Interfaces** - CLI and Web interfaces
 - ✅ **Configuration Management** - Hard-coded defaults with override capability
 
 ### Memory System (Stable)
@@ -50,8 +50,7 @@ This document tracks Vy's development status, current capabilities, known limita
 
 ### Interface Options (Stable)
 
-- ✅ **CLI Mode** - Classic text-based interaction
-- ✅ **TUI Mode** - Full-screen terminal interface with scrolling
+- ✅ **CLI Mode** - Text-based conversation interface
 - ✅ **Web Mode** - Modern web interface (Rust API + Next.js frontend)
 - ✅ **Configuration** - Easy setup with `vy config init`
 
@@ -77,7 +76,7 @@ This document tracks Vy's development status, current capabilities, known limita
 
 ### Interface Limitations
 
-- **TUI**: Limited to terminal size, no resize handling
+- **CLI**: Works on any terminal size
 - **Web**: Mobile interface needs polish
 - **CLI**: No conversation history navigation
 
@@ -93,7 +92,7 @@ This document tracks Vy's development status, current capabilities, known limita
 
 - [ ] **Memory System Refinement** - Better deduplication and relevance scoring
 - [ ] **Configuration Validation** - More robust error handling and recovery
-- [ ] **TUI Improvements** - Better scrolling and window management
+- [ ] **CLI Improvements** - Enhanced formatting and output options
 - [ ] **Web Interface Polish** - Mobile responsiveness and PWA features
 
 ### Architecture Experiments
@@ -182,7 +181,7 @@ This document tracks Vy's development status, current capabilities, known limita
 - **Config System Overhaul** (Aug 2025) - Mandatory API keys, hard-coded model defaults
 - **Web Interface** (Jul 2025) - Added Next.js frontend with mobile support
 - **Memory Tools** (Jun 2025) - Full CRUD operations for memory management
-- **TUI Interface** (May 2025) - Added terminal user interface option
+- **CLI Interface** (May 2025) - Enhanced command-line interface
 
 ### Breaking Changes Policy
 
