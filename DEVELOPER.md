@@ -1,6 +1,28 @@
 # Vy - Developer Documentation
 
+> ⚠️ **PRE-ALPHA PROJECT** - Vy is in rapid development mode. We prioritize clean, maintainable code over backward compatibility. Expect frequent breaking changes and API evolution.
+
 This document provides technical details about Vy's architecture, development setup, and contribution guidelines.
+
+## 🚧 Pre-Alpha Development Philosophy
+
+**Current Development Priorities:**
+
+1. **Clean Code First** - We refactor aggressively and break APIs when it improves code quality
+2. **Rapid Iteration** - Fast experimentation over stability guarantees
+3. **Breaking Changes Welcome** - No deprecation periods, we change things immediately when needed
+4. **Architecture Evolution** - Core systems are still being designed and redesigned
+5. **Single User Focus** - Optimized for the primary maintainer's workflow and preferences
+
+**What This Means for Contributors:**
+
+- **Expect API changes** between any commits
+- **No semantic versioning** until we reach alpha/beta status
+- **Breaking changes don't require major version bumps**
+- **Focus on correctness and maintainability** over compatibility
+- **Refactoring PRs are highly valued**
+
+This approach allows us to build the best possible foundation without being constrained by early architectural decisions. We'll adopt stability guarantees once core features mature.
 
 ## 🏗️ Architecture Overview
 
@@ -18,6 +40,7 @@ vy/
 ### Crate Responsibilities
 
 #### `vy-core` - Core Engine
+
 The interface-agnostic brain of Vy containing:
 
 - **`VyCore` struct**: Main AI orchestration and conversation management
@@ -27,6 +50,7 @@ The interface-agnostic brain of Vy containing:
 - **Error handling**: Robust error types and recovery mechanisms
 
 #### `vy-cli` - Command Line Interface
+
 Classic text-based interface providing:
 
 - **Chat implementation**: Line-by-line conversation flow
@@ -35,6 +59,7 @@ Classic text-based interface providing:
 - **Error presentation**: User-friendly error formatting
 
 #### `vy-tui` - Terminal User Interface
+
 Modern visual interface featuring:
 
 - **Full-screen layout**: Scrollable chat history with status bar
@@ -43,6 +68,7 @@ Modern visual interface featuring:
 - **Color-coded messages**: Visual distinction between user/AI/system messages
 
 #### `vy` - Main Binary
+
 Coordination layer that:
 
 - **Parses command-line arguments**: Routes to appropriate interface
@@ -125,18 +151,21 @@ Conversation → Fact Extraction → Embeddings → Vector Storage → Semantic 
 ### Memory Components
 
 **VectorMemory (`vy-core/src/memory.rs`)**
+
 - Manages Qdrant cloud connections
 - Handles embedding generation via OpenAI
 - Implements semantic search with similarity scoring
 - Provides CRUD operations for memory storage
 
 **Memory Tools (`vy-core/src/tools/memory_tools.rs`)**
+
 - `store_memory` - Add new facts
 - `search_memory` - Semantic similarity search
 - `smart_update_memory` - Update existing memories
 - `remove_memories` - Delete memories by query
 
 **Conversation Analysis**
+
 - Automatic fact extraction from chat history
 - LLM-powered relevance scoring
 - Background processing to avoid blocking chat
@@ -155,6 +184,7 @@ default_chat_mode = "cli"
 ```
 
 **Configuration Management (`vy-core/src/config.rs`)**
+
 - Cross-platform config directory detection
 - TOML serialization with serde
 - Validation and default value handling
@@ -333,6 +363,7 @@ pub fn build_openai_vy(config: VyConfig) -> Result<VyCore, VyError> {
 4. **Add CLI integration**: Update `vy/src/main.rs`
 
 Example structure:
+
 ```rust
 // vy-web/src/lib.rs
 use vy_core::{VyCore, builder::build_openai_vy};
@@ -351,12 +382,14 @@ impl WebInterface {
 ## 🚀 Performance Considerations
 
 ### Memory System
+
 - **Embedding caching**: Avoid re-embedding identical queries
 - **Connection pooling**: Reuse Qdrant connections
 - **Batch operations**: Group memory operations when possible
 - **Background processing**: Async memory analysis doesn't block chat
 
 ### Interface Optimization
+
 - **TUI rendering**: Minimal screen updates, efficient layouts
 - **CLI streaming**: Real-time response streaming for long outputs
 - **Error recovery**: Graceful degradation when services unavailable
@@ -410,18 +443,21 @@ cargo test --all-features
 ## 🔒 Security Considerations
 
 ### API Key Management
+
 - Store in OS-specific secure locations
 - Never log or display full API keys
 - Support environment variable overrides
 - Validate key formats before storage
 
 ### Memory Privacy
+
 - All memories stored in user's private cloud instance
 - No sharing of memory data between users
 - Support for local-only memory storage (future)
 - Clear data deletion capabilities
 
 ### Input Sanitization
+
 - Validate all user inputs before processing
 - Escape special characters in tool outputs
 - Limit message lengths and memory storage

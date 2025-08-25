@@ -1,5 +1,7 @@
 # Vy - AI-Powered Assistant with Memory
 
+> ⚠️ **PRE-ALPHA SOFTWARE** - Vy is in active development with rapid iteration. Expect breaking changes, evolving APIs, and frequent updates. This project currently prioritizes clean, maintainable code over backward compatibility.
+
 Vy is a sophisticated AI assistant built in Rust that remembers your conversations and provides intelligent, personalized responses. Choose between a modern Terminal User Interface (TUI) or classic Command Line Interface (CLI) to chat naturally with AI that gets to know you over time.
 
 ## ✨ Key Features
@@ -10,6 +12,17 @@ Vy is a sophisticated AI assistant built in Rust that remembers your conversatio
 - **📊 Nutrition Analysis**: Analyze meal photos for ingredient breakdown
 - **⚙️ Configurable**: Support for various OpenAI models and customizable settings
 - **🛡️ Privacy-First**: All memories stored locally or in your private cloud instance
+
+## 🚧 Development Status
+
+**Pre-Alpha:** Vy is under active development with a focus on:
+
+- **Rapid iteration** and experimentation with new features
+- **Clean, maintainable code** over backward compatibility
+- **Breaking changes** are common and expected
+- **API stability** is not yet a priority
+
+This approach allows for faster development and cleaner architecture. Once core features stabilize, we'll transition to semantic versioning with compatibility guarantees.
 
 ## 🚀 Quick Start
 
@@ -276,6 +289,17 @@ vy config get llm_api_key
 ## 📄 Need More Technical Details?
 
 For architecture information, development setup, and contributing guidelines, see [`DEVELOPER.md`](DEVELOPER.md).
+
+## 🚧 Contributing & Development Philosophy
+
+**Pre-Alpha Development Approach:**
+
+- **Breaking changes are welcome** when they improve code quality or user experience
+- **No backward compatibility guarantees** during pre-alpha phase
+- **Clean code and maintainability** take priority over preserving old interfaces
+- **Rapid iteration** is preferred over extensive deprecation periods
+
+This allows us to build the best possible foundation without being constrained by early architectural decisions. We'll transition to semantic versioning and stability guarantees once the core features mature.
 
 ## 📞 Support
 

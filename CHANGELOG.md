@@ -1,6 +1,8 @@
 # Vy Changelog
 
-## Configuration System Overhaul - December 2024
+> ⚠️ **PRE-ALPHA PROJECT** - Vy is in rapid development with frequent breaking changes. This changelog documents major architectural changes during pre-alpha development. No backward compatibility is maintained during this phase.
+
+## Configuration System Overhaul - August 2025
 
 ### Major Changes to Configuration Approach
 
@@ -100,4 +102,21 @@
 
 ---
 
-_This changelog documents the major configuration system overhaul designed to improve security, usability, and clarity for all Vy users._
+## Pre-Alpha Development Notes
+
+**Development Philosophy:**
+
+- **Breaking changes are expected** and implemented immediately without deprecation periods
+- **Clean code prioritized** over backward compatibility during pre-alpha phase
+- **Rapid iteration** preferred over extensive migration support
+- **API stability** will come later during alpha/beta phases
+
+**For Contributors:**
+
+- All changes should prioritize code quality and maintainability
+- Breaking existing interfaces is encouraged when it improves the system
+- Focus on building the best possible foundation for future stability
+
+---
+
+_This changelog documents major changes during Vy's pre-alpha development phase, where breaking changes and API evolution are expected and welcomed._
