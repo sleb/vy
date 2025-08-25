@@ -9,8 +9,9 @@ use vy_core::config::VyConfig;
 use vy_core::vector_memory::VectorMemoryConfig;
 
 fn test_config() -> VyConfig {
+    let api_key = std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "test-key".to_string());
     VyConfig {
-        llm_api_key: std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "test-key".to_string()),
+        llm_api_key: api_key.clone(),
         google_api_key: "test-google-key".to_string(),
         google_search_engine_id: "test-engine-id".to_string(),
         llm_model_id: "gpt-4o-mini".to_string(),
@@ -21,9 +22,8 @@ fn test_config() -> VyConfig {
         vector_memory: VectorMemoryConfig {
             qdrant_url: "http://localhost:6334".to_string(),
             qdrant_api_key: None,
-            collection_name: "test_agent_memories".to_string(),
-            openai_api_key: std::env::var("OPENAI_API_KEY")
-                .unwrap_or_else(|_| "test-key".to_string()),
+            collection_name: "test_memories".to_string(),
+            openai_api_key: api_key,
             embedding_model: "text-embedding-3-small".to_string(),
         },
     }

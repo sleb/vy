@@ -17,7 +17,7 @@ pub mod memory;
 pub mod tools;
 pub mod vector_memory;
 
-// Re-export memory types from vector_memory for compatibility
+// Re-export memory types from vector_memory
 pub use crate::memory::MemoryEntry;
 pub use vector_memory::{VectorMemory, VectorMemoryConfig};
 

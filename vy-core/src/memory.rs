@@ -1,6 +1,6 @@
 //! Memory types for Vy
 //!
-//! Provides basic memory entry types for compatibility with vector memory system.
+//! Provides basic memory entry types for the vector memory system.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

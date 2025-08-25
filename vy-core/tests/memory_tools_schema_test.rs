@@ -239,7 +239,7 @@ async fn test_agent_initialization_with_memory_tools() -> Result<()> {
         system_prompt: "You are Vy, a helpful AI assistant.".to_string(),
         vector_memory: vy_core::vector_memory::VectorMemoryConfig {
             qdrant_url: "https://test.qdrant.io".to_string(),
-            qdrant_api_key: Some("test-key".to_string()),
+            qdrant_api_key: Some("test-qdrant-key".to_string()),
             collection_name: "test_memories".to_string(),
             openai_api_key: "test-openai-key".to_string(),
             embedding_model: "text-embedding-3-small".to_string(),
@@ -263,9 +263,7 @@ async fn test_agent_initialization_with_memory_tools() -> Result<()> {
             {
                 panic!("❌ Schema validation error detected: {error_message}");
             } else {
-                println!(
-                    "✅ Agent failed with non-schema error (expected): {error_message}"
-                );
+                println!("✅ Agent failed with non-schema error (expected): {error_message}");
                 println!("   This means schema validation passed successfully!");
             }
         }

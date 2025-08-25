@@ -64,8 +64,8 @@ fn load_config_from_env() -> anyhow::Result<VyConfig> {
 
     let config = VyConfig {
         llm_api_key: llm_api_key.clone(),
-        google_api_key: get_optional_env("VY_GOOGLE_API_KEY").unwrap_or_default(),
-        google_search_engine_id: get_optional_env("VY_GOOGLE_SEARCH_ENGINE_ID").unwrap_or_default(),
+        google_api_key: get_required_env("VY_GOOGLE_API_KEY")?,
+        google_search_engine_id: get_required_env("VY_GOOGLE_SEARCH_ENGINE_ID")?,
         llm_model_id: get_optional_env("VY_LLM_MODEL_ID")
             .unwrap_or_else(|| "gpt-4o-mini".to_string()),
         memory_model_id: get_optional_env("VY_MEMORY_MODEL_ID")
@@ -79,10 +79,11 @@ fn load_config_from_env() -> anyhow::Result<VyConfig> {
         vector_memory: VectorMemoryConfig {
             qdrant_url: get_optional_env("VY_QDRANT_URL")
                 .unwrap_or_else(|| "http://localhost:6333".to_string()),
-            qdrant_api_key: get_optional_env("VY_QDRANT_API_KEY"), // Only this is truly optional (for local Qdrant)
+            qdrant_api_key: get_optional_env("VY_QDRANT_API_KEY"),
             collection_name: get_optional_env("VY_COLLECTION_NAME")
                 .unwrap_or_else(|| "vy_memories".to_string()),
-            openai_api_key: llm_api_key.clone(),
+            openai_api_key: get_optional_env("VY_VECTOR_MEMORY_OPENAI_API_KEY")
+                .unwrap_or_else(|| llm_api_key.clone()),
             embedding_model: get_optional_env("VY_EMBEDDING_MODEL")
                 .unwrap_or_else(|| "text-embedding-3-small".to_string()),
         },

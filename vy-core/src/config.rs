@@ -22,8 +22,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::vector_memory::VectorMemoryConfig;
 
+// Hard-coded model defaults - can be overridden by user
 fn default_model_id() -> String {
-    "gpt-3.5-turbo".to_string()
+    "gpt-4o-mini".to_string()
 }
 
 fn default_memory_model_id() -> String {
@@ -83,9 +84,11 @@ WORKFLOW: For each user message -> 1) check search_memory for context 2) respond
 /// Vy configuration structure
 #[derive(Debug, Deserialize, Serialize)]
 pub struct VyConfig {
+    // Mandatory API keys and project IDs - no defaults
     pub llm_api_key: String,
     pub google_api_key: String,
     pub google_search_engine_id: String,
+    // Hard-coded model defaults with override capability
     #[serde(default = "default_model_id")]
     pub llm_model_id: String,
     #[serde(default = "default_memory_model_id")]
@@ -114,7 +117,40 @@ pub fn load_config(path: &Path) -> Result<VyConfig> {
             )
         })?;
 
+    // Validate that all mandatory fields are provided
+    validate_config(&config)?;
+
     Ok(config)
+}
+
+/// Validate that all mandatory configuration fields are present
+fn validate_config(config: &VyConfig) -> Result<()> {
+    if config.llm_api_key.is_empty() {
+        anyhow::bail!(
+            "❌ Missing required configuration: llm_api_key\n💡 Set it with: vy config set llm_api_key <your-api-key>"
+        );
+    }
+
+    if config.google_api_key.is_empty() {
+        anyhow::bail!(
+            "❌ Missing required configuration: google_api_key\n💡 Set it with: vy config set google_api_key <your-api-key>"
+        );
+    }
+
+    if config.google_search_engine_id.is_empty() {
+        anyhow::bail!(
+            "❌ Missing required configuration: google_search_engine_id\n💡 Set it with: vy config set google_search_engine_id <your-engine-id>"
+        );
+    }
+
+    // Validate vector memory mandatory fields
+    if config.vector_memory.openai_api_key.is_empty() {
+        anyhow::bail!(
+            "❌ Missing required configuration: vector_memory openai_api_key\n💡 Set it with: vy config set vector_memory_embedding_api_key <your-openai-api-key>"
+        );
+    }
+
+    Ok(())
 }
 
 /// Load or create Vy configuration

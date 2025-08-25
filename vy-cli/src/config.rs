@@ -18,6 +18,7 @@ pub enum ConfigKey {
     VectorMemoryQdrantApiKey,
     VectorMemoryCollectionName,
     VectorMemoryEmbeddingModel,
+    VectorMemoryEmbeddingApiKey,
 }
 
 impl ConfigKey {
@@ -34,6 +35,7 @@ impl ConfigKey {
             "vector_memory_qdrant_api_key" => Some(Self::VectorMemoryQdrantApiKey),
             "vector_memory_collection_name" => Some(Self::VectorMemoryCollectionName),
             "vector_memory_embedding_model" => Some(Self::VectorMemoryEmbeddingModel),
+            "vector_memory_embedding_api_key" => Some(Self::VectorMemoryEmbeddingApiKey),
             _ => None,
         }
     }
@@ -51,6 +53,7 @@ impl ConfigKey {
             Self::VectorMemoryQdrantApiKey => "vector_memory_qdrant_api_key",
             Self::VectorMemoryCollectionName => "vector_memory_collection_name",
             Self::VectorMemoryEmbeddingModel => "vector_memory_embedding_model",
+            Self::VectorMemoryEmbeddingApiKey => "vector_memory_embedding_api_key",
         }
     }
 
@@ -78,6 +81,7 @@ impl ConfigKey {
                 .unwrap_or_default(),
             Self::VectorMemoryCollectionName => config.vector_memory.collection_name.clone(),
             Self::VectorMemoryEmbeddingModel => config.vector_memory.embedding_model.clone(),
+            Self::VectorMemoryEmbeddingApiKey => config.vector_memory.openai_api_key.clone(),
         }
     }
 
@@ -97,6 +101,7 @@ impl ConfigKey {
             }
             Self::VectorMemoryCollectionName => config.vector_memory.collection_name = value,
             Self::VectorMemoryEmbeddingModel => config.vector_memory.embedding_model = value,
+            Self::VectorMemoryEmbeddingApiKey => config.vector_memory.openai_api_key = value,
         }
     }
 
@@ -113,7 +118,18 @@ impl ConfigKey {
             ConfigKey::VectorMemoryQdrantApiKey,
             ConfigKey::VectorMemoryCollectionName,
             ConfigKey::VectorMemoryEmbeddingModel,
+            ConfigKey::VectorMemoryEmbeddingApiKey,
         ]
+    }
+
+    pub fn is_mandatory(&self) -> bool {
+        matches!(
+            self,
+            Self::LlmApiKey
+                | Self::GoogleApiKey
+                | Self::GoogleSearchEngineId
+                | Self::VectorMemoryEmbeddingApiKey
+        )
     }
 }
 
@@ -145,8 +161,11 @@ where
 
 fn run_init(config_path: &Path) -> Result<()> {
     println!("🔧 Initializing Vy configuration...");
+    println!("📝 All API keys and project IDs are mandatory - no defaults provided.");
+    println!("💡 Model settings use sensible defaults but can be customized.");
     println!();
 
+    // Start with default config (includes hard-coded model defaults)
     let mut config = VyConfig {
         llm_api_key: String::new(),
         google_api_key: String::new(),
@@ -159,85 +178,96 @@ fn run_init(config_path: &Path) -> Result<()> {
         vector_memory: vy_core::vector_memory::VectorMemoryConfig::default(),
     };
 
-    // Prompt for required values (excluding vector memory keys which are handled separately)
-    for key in ConfigKey::all_keys() {
-        match key {
-            ConfigKey::LlmApiKey => {
-                println!("🤖 Enter your OpenAI API key:");
-                println!("   💡 Get one at: https://platform.openai.com/api-keys");
-                let value = prompt_for_value(true)?;
-                key.set_value(&mut config, value);
-            }
-            ConfigKey::GoogleApiKey => {
-                println!("\n🔍 Enter your Google API key (for web search):");
-                println!("   💡 Get one at: https://console.developers.google.com/");
-                let value = prompt_for_value(true)?;
-                key.set_value(&mut config, value);
-            }
-            ConfigKey::GoogleSearchEngineId => {
-                println!("\n🔍 Enter your Google Custom Search Engine ID:");
-                println!("   💡 Create one at: https://cse.google.com/");
-                let value = prompt_for_value(false)?;
-                key.set_value(&mut config, value);
-            }
-            // Skip vector memory keys - handled in dedicated section below
-            ConfigKey::VectorMemoryQdrantUrl
-            | ConfigKey::VectorMemoryQdrantApiKey
-            | ConfigKey::VectorMemoryCollectionName
-            | ConfigKey::VectorMemoryEmbeddingModel => continue,
-            _ => {
-                // Optional fields with defaults
-                println!(
-                    "\n⚙️  {} (default: {}):",
-                    key.as_str(),
-                    key.get_value(&config)
-                );
-                print!("   Enter new value or press Enter to keep default: ");
-                std::io::stdout().flush()?;
+    // Prompt for mandatory API keys and project IDs
+    println!("🔑 MANDATORY: API Keys and Project IDs");
+    println!("   These fields are required and have no defaults.");
+    println!();
 
-                let mut input = String::new();
-                std::io::stdin().read_line(&mut input)?;
-                let input = input.trim();
+    println!("🤖 Enter your OpenAI API key:");
+    println!("   💡 Get one at: https://platform.openai.com/api-keys");
+    let llm_api_key = prompt_for_value(true)?;
+    config.llm_api_key = llm_api_key;
 
-                if !input.is_empty() {
-                    key.set_value(&mut config, input.to_string());
-                }
-            }
+    println!("\n🔍 Enter your Google API key (for web search):");
+    println!("   💡 Get one at: https://console.developers.google.com/");
+    let google_api_key = prompt_for_value(true)?;
+    config.google_api_key = google_api_key;
+
+    println!("\n🔍 Enter your Google Custom Search Engine ID:");
+    println!("   💡 Create one at: https://cse.google.com/");
+    let google_engine_id = prompt_for_value(true)?;
+    config.google_search_engine_id = google_engine_id;
+
+    println!("\n🧠 Enter OpenAI API key for vector memory embeddings:");
+    println!("   💡 Can be the same as your main OpenAI key");
+    let embedding_api_key = prompt_for_value(true)?;
+    config.vector_memory.openai_api_key = embedding_api_key;
+
+    // Optional: Allow override of model defaults
+    println!("\n🤖 MODEL SETTINGS (Hard-coded defaults with override option):");
+    println!("   Press Enter to use defaults, or enter custom values.");
+    println!();
+
+    for key in [
+        ConfigKey::ModelId,
+        ConfigKey::MemoryModelId,
+        ConfigKey::MemorySimilarityModelId,
+        ConfigKey::DefaultChatMode,
+    ] {
+        println!(
+            "⚙️  {} (default: {}):",
+            key.as_str(),
+            key.get_value(&config)
+        );
+        print!("   Enter custom value (or press Enter to use default): ");
+        std::io::stdout().flush()?;
+
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+        let input = input.trim();
+
+        if !input.is_empty() {
+            key.set_value(&mut config, input.to_string());
         }
     }
 
-    // Collect vector memory configuration (now always enabled)
-    println!("\n🚀 Vector Memory Configuration:");
-    println!("   Vector memory provides semantic search and cloud sync capabilities.");
-    println!("   For cloud setup, get credentials at: https://cloud.qdrant.io/");
+    // Optional: Vector memory configuration overrides
+    println!("\n🚀 VECTOR MEMORY SETTINGS (Hard-coded defaults with override option):");
+    println!("   Press Enter to use defaults, or enter custom values.");
+    println!();
 
-    print!("   Qdrant URL (default: http://localhost:6334): ");
+    for key in [
+        ConfigKey::VectorMemoryQdrantUrl,
+        ConfigKey::VectorMemoryCollectionName,
+        ConfigKey::VectorMemoryEmbeddingModel,
+    ] {
+        println!(
+            "⚙️  {} (default: {}):",
+            key.as_str(),
+            key.get_value(&config)
+        );
+        print!("   Enter custom value (or press Enter to use default): ");
+        std::io::stdout().flush()?;
+
+        let mut input = String::new();
+        std::io::stdin().read_line(&mut input)?;
+        let input = input.trim();
+
+        if !input.is_empty() {
+            key.set_value(&mut config, input.to_string());
+        }
+    }
+
+    // Optional Qdrant API key for cloud usage
+    println!("⚙️  Qdrant API Key (optional - only needed for Qdrant Cloud):");
+    print!("   Enter API key (or press Enter to skip): ");
     std::io::stdout().flush()?;
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
     let input = input.trim();
     if !input.is_empty() {
-        config.vector_memory.qdrant_url = input.to_string();
+        config.vector_memory.qdrant_api_key = Some(input.to_string());
     }
-
-    print!("   Qdrant API Key (optional for local, required for cloud): ");
-    std::io::stdout().flush()?;
-    let api_key = prompt_for_value(true)?;
-    if !api_key.is_empty() {
-        config.vector_memory.qdrant_api_key = Some(api_key);
-    }
-
-    print!("   Collection name (default: vy_memories): ");
-    std::io::stdout().flush()?;
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-    let input = input.trim();
-    if !input.is_empty() {
-        config.vector_memory.collection_name = input.to_string();
-    }
-
-    // Set the OpenAI API key for embeddings (same as LLM key)
-    config.vector_memory.openai_api_key = config.llm_api_key.clone();
 
     println!(
         "   ✅ Vector memory configured with Qdrant at: {}",

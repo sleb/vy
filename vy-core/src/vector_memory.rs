@@ -25,21 +25,39 @@ use crate::memory::MemoryEntry;
 /// Vector memory configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct VectorMemoryConfig {
+    #[serde(default = "default_qdrant_url")]
     pub qdrant_url: String,
     pub qdrant_api_key: Option<String>,
+    #[serde(default = "default_collection_name")]
     pub collection_name: String,
+    // Mandatory - no default, must be provided by user
     pub openai_api_key: String,
+    #[serde(default = "default_embedding_model")]
     pub embedding_model: String,
+}
+
+// Hard-coded defaults for vector memory configuration
+fn default_qdrant_url() -> String {
+    "http://localhost:6334".to_string()
+}
+
+fn default_collection_name() -> String {
+    "vy_memories".to_string()
+}
+
+fn default_embedding_model() -> String {
+    "text-embedding-3-small".to_string()
 }
 
 impl Default for VectorMemoryConfig {
     fn default() -> Self {
         Self {
-            qdrant_url: "http://localhost:6334".to_string(),
+            qdrant_url: default_qdrant_url(),
             qdrant_api_key: None,
-            collection_name: "vy_memories".to_string(),
+            collection_name: default_collection_name(),
+            // No default for API key - must be provided by user
             openai_api_key: String::new(),
-            embedding_model: "text-embedding-3-small".to_string(),
+            embedding_model: default_embedding_model(),
         }
     }
 }

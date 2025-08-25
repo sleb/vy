@@ -31,11 +31,14 @@ Initialize your configuration (you'll be prompted for API keys):
 vy config init
 ```
 
-You'll need:
+**Required API keys and credentials:**
 
-- **OpenAI API key** (required for AI responses)
-- **Google API key** (optional, for web search)
-- **Google Custom Search Engine ID** (optional, for web search)
+- **OpenAI API key** (required - for AI responses)
+- **Google API key** (required - for web search functionality)
+- **Google Custom Search Engine ID** (required - for web search)
+- **OpenAI API key for embeddings** (required - can be same as main key)
+
+All API keys are mandatory with no defaults. The system will guide you through obtaining them during setup.
 
 ### 3. Start Chatting
 
@@ -164,16 +167,25 @@ vy config --edit
 
 ### Key Settings
 
-| Setting             | Description                 | Default         |
-| ------------------- | --------------------------- | --------------- |
-| `llm_model_id`      | Main AI model               | `gpt-3.5-turbo` |
-| `memory_model_id`   | Model for memory processing | `gpt-4o-mini`   |
-| `default_chat_mode` | Interface preference        | `cli`           |
+| Setting                         | Description                        | Default                  |
+| ------------------------------- | ---------------------------------- | ------------------------ |
+| `llm_model_id`                  | Main AI model                      | `gpt-4o-mini`            |
+| `memory_model_id`               | Model for memory processing        | `gpt-4o-mini`            |
+| `memory_similarity_model_id`    | Model for memory similarity search | `gpt-4o-mini`            |
+| `default_chat_mode`             | Interface preference               | `cli`                    |
+| `vector_memory_embedding_model` | Embedding model for vector memory  | `text-embedding-3-small` |
+
+**Model Configuration:**
+
+- All models use hard-coded sensible defaults
+- Override any model with custom values: `vy config set llm_model_id gpt-4o`
+- API keys are mandatory and must be configured during initialization
 
 **Recommended Models:**
 
 - `gpt-4o` - Best quality, higher cost
-- `gpt-4o-mini` - Great balance of quality and cost ⭐
+- `gpt-4o-mini` - Great balance of quality and cost ⭐ (default)
+- `gpt-4` - High quality, moderate cost
 - `gpt-3.5-turbo` - Fast and economical
 
 ## 🧠 Memory Management
@@ -237,9 +249,17 @@ vy remember clear --confirm
 # Check your configuration
 vy config list
 
+# Initialize configuration if needed
+vy config init
+
 # Verify API key is set
 vy config get llm_api_key
 ```
+
+**Missing required configuration?**
+
+- All API keys are mandatory - run `vy config init` to set them up
+- Error messages will indicate exactly which keys are missing
 
 **Memory not working?**
 
