@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  vy-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:8080"
+    environment:
+      - PORT=8080
+      - HOST=0.0.0.0
+      - VY_LLM_MODEL_ID=gpt-4o-mini
+      - VY_MEMORY_MODEL_ID=gpt-4o-mini
+      - VY_MEMORY_SIMILARITY_MODEL_ID=gpt-4o-mini
+      - VY_DEFAULT_CHAT_MODE=web
+      - VY_QDRANT_URL=http://qdrant:6333
+      - VY_COLLECTION_NAME=vy_memories
+      - VY_EMBEDDING_MODEL=text-embedding-3-small
+      # These should be set in .env file or environment
+      - VY_LLM_API_KEY=${VY_LLM_API_KEY}
+      - VY_GOOGLE_API_KEY=${VY_GOOGLE_API_KEY}
+      - VY_GOOGLE_SEARCH_ENGINE_ID=${VY_GOOGLE_SEARCH_ENGINE_ID}
+      - VY_VECTOR_MEMORY_OPENAI_API_KEY=${VY_LLM_API_KEY}
+    depends_on:
+      - qdrant
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  qdrant:
+    image: qdrant/qdrant:v1.7.4
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  qdrant_storage:
+    driver: local
+
+networks:
+  default:
+    name: vy-network

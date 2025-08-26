@@ -1,0 +1,117 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: vy-web
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/execution-environment: gen2
+spec:
+  template:
+    metadata:
+      annotations:
+        # Cloud Run configuration
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/cpu-throttling: "true"
+        autoscaling.knative.dev/maxScale: "10"
+        autoscaling.knative.dev/minScale: "0"
+    spec:
+      # Service account (replace with your service account)
+      serviceAccountName: vy-web-service-account
+
+      containerConcurrency: 100
+      timeoutSeconds: 300
+
+      containers:
+      - name: vy-web
+        # Replace with your actual image URL after pushing to Google Container Registry
+        image: gcr.io/PROJECT_ID/vy-web:latest
+
+        ports:
+        - containerPort: 8080
+          name: http1
+
+        env:
+        # Required environment variables - set these in Cloud Run console or via gcloud
+        - name: VY_LLM_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: vy-secrets
+              key: llm-api-key
+
+        - name: VY_GOOGLE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: vy-secrets
+              key: google-api-key
+
+        - name: VY_GOOGLE_SEARCH_ENGINE_ID
+          valueFrom:
+            secretKeyRef:
+              name: vy-secrets
+              key: google-search-engine-id
+
+        # Optional environment variables with defaults
+        - name: VY_LLM_MODEL_ID
+          value: "gpt-4o-mini"
+
+        - name: VY_MEMORY_MODEL_ID
+          value: "gpt-4o-mini"
+
+        - name: VY_MEMORY_SIMILARITY_MODEL_ID
+          value: "gpt-4o-mini"
+
+        - name: VY_DEFAULT_CHAT_MODE
+          value: "web"
+
+        - name: VY_QDRANT_URL
+          value: "http://localhost:6333"
+
+        - name: VY_COLLECTION_NAME
+          value: "vy_memories"
+
+        - name: VY_EMBEDDING_MODEL
+          value: "text-embedding-3-small"
+
+        # Cloud Run specific
+        - name: PORT
+          value: "8080"
+
+        - name: HOST
+          value: "0.0.0.0"
+
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        # Startup probe for slower cold starts
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 10
