@@ -25,9 +25,10 @@
   },
   "devDependencies": {
     "@repo/core": "*",
-    "@repo/vector-store": "*",
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
+    "@repo/vector-store": "*",
+    "@types/node": "^24.3.0",
     "eslint": "^9.34.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2",
