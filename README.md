@@ -76,7 +76,7 @@ vy/
 
 - ✅ Monorepo setup with Turborepo
 - ✅ Core types and interfaces (`packages/core`)
-- 🔄 ChromaDB abstraction layer (`packages/vector-store`)
+- ✅ ChromaDB abstraction layer (`packages/vector-store`)
 - ⏳ Basic MCP server (`packages/mcp-server-basic`)
 - ⏳ CLI testing tool (`apps/cli-test`)
 - ⏳ Basic documentation and setup guides
@@ -180,6 +180,11 @@ VY_CHROMA_SSL=true
 turbo dev --filter=mcp-server-basic
 turbo build --filter=vector-store
 turbo test --filter=core
+
+# Run tests
+npm run test                    # All packages
+turbo test --filter=vector-store # Specific package
+cd packages/vector-store && npm run test # Direct test execution
 ```
 
 ## 🧠 Core Concepts & Design Decisions
@@ -211,7 +216,9 @@ turbo test --filter=core
 - **Single Collection**: `vy_memories` with type-based metadata filtering
 - **OpenAI Embeddings**: text-embedding-3-small (1536D, cost-optimal)
 - **Embed at Storage**: Generate embeddings when storing memories
+- **Failure Recovery**: Store raw data even when embedding generation fails
 - **Rich Metadata**: Support temporal, type, and custom filtering
+- **UUID v7 IDs**: Time-sortable identifiers for efficient database operations
 
 ### Configuration Patterns
 
@@ -219,6 +226,26 @@ turbo test --filter=core
 - **Hosted Production**: `createHostedConfig()` - explicit auth requirements
 - **Environment Variables**: Standard deployment pattern
 - **Validation**: Type-safe configuration with clear error messages
+- **Error Recovery**: Failed embeddings tracked for batch reprocessing
+
+### Testing Strategy
+
+**Comprehensive Unit Testing**:
+
+- **Error Handling**: Validates data preservation when embeddings fail
+- **Memory Conversion**: Tests complex domain object ↔ ChromaDB document mapping
+- **Search Logic**: Verifies distance-to-similarity conversion and relevance filtering
+- **ID Generation**: Ensures UUID v7 format compliance and uniqueness
+- **Failed Embedding Recovery**: Tests automatic tracking and reprocessing system
+
+**Test Coverage**: 10/10 tests passing, focusing on critical failure scenarios and data integrity
+
+**Modern Testing Patterns**:
+
+- **Behavior-driven**: Test what the code does, not how it's implemented
+- **Mock strategy**: Mock external dependencies, test real domain logic
+- **Error simulation**: Explicit testing of failure scenarios
+- **Type safety**: Runtime validation of TypeScript interfaces
 
 ### MCP Integration
 
@@ -256,27 +283,32 @@ This project demonstrates:
 - ✅ Configuration system with local/hosted patterns
 - ✅ OpenAI embedding service implementation
 - ✅ ChromaDB client wrapper with connection management
-- 🔄 High-level MemoryStore implementation
+- ✅ High-level ChromaMemoryStore implementation
+- ✅ Comprehensive unit test suite (10/10 tests passing)
 - ⏳ MCP server with tool handlers
 - ⏳ CLI testing application
-- ⏳ Unit and integration test suites
+- ⏳ Integration test suites with Docker
 
 **Key Accomplishments**:
 
-- Comprehensive type system supporting future extensibility
-- Clean separation between vector operations and domain logic
-- Environment-based configuration supporting multiple deployment patterns
-- Modern TypeScript patterns (discriminated unions, factory functions, etc.)
+- **Robust Error Handling**: Never lose data even when embeddings fail
+- **Failed Embedding Recovery**: Automatic tracking and reprocessing system
+- **UUID v7 ID Generation**: Time-sortable, unique identifiers
+- **Memory Type Conversion**: Seamless domain object ↔ ChromaDB document mapping
+- **Semantic Search Logic**: Distance-to-similarity conversion with relevance filtering
+- **Comprehensive Testing**: Unit tests covering critical failure scenarios
+- **Modern TypeScript Patterns**: Discriminated unions, factory functions, service orchestration
 
 ## 🔗 Key Dependencies
 
 - **@modelcontextprotocol/sdk**: MCP protocol implementation
 - **chromadb**: Vector database for semantic storage
 - **OpenAI API**: Text embedding generation (text-embedding-3-small)
+- **uuid**: Time-sortable unique identifier generation (UUID v7)
 - **turborepo**: Monorepo build system and task orchestration
 - **typescript**: Static type checking and modern language features
 - **tsup**: Fast TypeScript bundling for library packages
-- **vitest**: Modern testing framework
+- **vitest**: Modern testing framework with comprehensive unit tests
 - **eslint**: Code linting with modern flat config
 - **prettier**: Code formatting
 
