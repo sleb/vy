@@ -18,10 +18,10 @@
     "test": "vitest"
   },
   "dependencies": {
-    "chromadb": "^1.8.1"
+    "chromadb": "^1.8.1",
+    "@repo/core": "workspace:*"
   },
   "devDependencies": {
-    "@repo/core": "*",
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "eslint": "^9.34.0",
