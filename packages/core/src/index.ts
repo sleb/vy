@@ -21,12 +21,13 @@ export * from "./types/mcp.js";
 // Re-export commonly used types for convenience
 export type {
   ConversationMemory,
-  McpToolHandler,
   Memory,
   MemoryId,
-  MemoryStore,
   MemoryType,
-  SearchQuery,
-  SearchResult,
-  VectorStore,
 } from "./types/memory.js";
+
+export type { SearchQuery, SearchResult } from "./types/search.js";
+
+export type { MemoryStore, VectorStore } from "./types/vector-store.js";
+
+export type { McpToolHandler } from "./types/mcp.js";

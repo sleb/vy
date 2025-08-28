@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "chromadb": "^1.8.1",
-    "@repo/core": "workspace:*",
+    "@repo/core": "*",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
