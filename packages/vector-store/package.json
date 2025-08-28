@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "chromadb": "^1.8.1",
-    "@repo/core": "workspace:*"
+    "@repo/core": "workspace:*",
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
@@ -27,6 +28,7 @@
     "eslint": "^9.34.0",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@types/uuid": "^10.0.0"
   }
 }
