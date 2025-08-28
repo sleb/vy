@@ -52,7 +52,7 @@ vy/
 
 ## 🚀 Implementation Phases
 
-### Phase 1: MVP Foundation (Current Phase) ✅ In Progress
+### Phase 1: MVP Foundation (Current Phase) 🔄 In Progress
 
 **Goal**: Basic semantic memory with MCP integration
 
@@ -60,39 +60,50 @@ vy/
 
 - `capture_conversation` - Store conversations with metadata and embeddings
 - `search_memory` - Semantic search across stored memories
+- `get_context` - Retrieve relevant memories for context injection
 - Basic vector storage with ChromaDB
 - MCP server implementation
 
+**Key Architecture Decisions**:
+
+- **Two-Layer Memory**: Session memory (raw, current) + Long-term memory (processed, persistent)
+- **Raw-Only Storage**: Start with full conversations, add condensation in Phase 2
+- **Single Collection**: All memories in `vy_memories` collection with type metadata
+- **Embed at Storage**: Generate embeddings when storing memories
+- **Environment Configuration**: Explicit local vs. hosted configurations
+
 **Deliverables**:
 
-- [ ] Monorepo setup with Turborepo
-- [ ] Core types and interfaces (`packages/core`)
-- [ ] ChromaDB abstraction layer (`packages/vector-store`)
-- [ ] Basic MCP server (`packages/mcp-server-basic`)
-- [ ] CLI testing tool (`apps/cli-test`)
-- [ ] Basic documentation and setup guides
+- ✅ Monorepo setup with Turborepo
+- ✅ Core types and interfaces (`packages/core`)
+- 🔄 ChromaDB abstraction layer (`packages/vector-store`)
+- ⏳ Basic MCP server (`packages/mcp-server-basic`)
+- ⏳ CLI testing tool (`apps/cli-test`)
+- ⏳ Basic documentation and setup guides
 
-### Phase 2: Enhanced Memory Intelligence 🔄 Planned
+### Phase 2: Enhanced Memory Intelligence 📋 Planned
 
-**Goal**: Smarter memory management and retrieval
-
-**Features**:
-
-- Memory condensation and summarization
-- Context-aware search ranking
-- Memory categorization and tagging
-- Temporal memory patterns
-
-### Phase 3: Strategic Intelligence 📋 Planned
-
-**Goal**: Proactive insights and task management
+**Goal**: Implement the full two-layer architecture
 
 **Features**:
 
-- Auto-extraction of TODOs and action items
-- Goal alignment tracking
-- Pattern recognition across conversations
-- Proactive suggestion system
+- **Session Processing Pipeline**: End-of-conversation insight extraction
+- **Memory Condensation**: AI-powered summarization and insight extraction
+- **Multiple Memory Types**: Insights, learnings, facts, action items
+- **Context-aware Search**: Smart relevance ranking with recency weighting
+- **Memory Categorization**: Automatic tagging and domain classification
+
+### Phase 3: Strategic Intelligence 🎯 Planned
+
+**Goal**: Proactive insights and intelligent assistance
+
+**Features**:
+
+- **Proactive Context Injection**: Automatically surface relevant memories
+- **Goal Alignment Tracking**: Connect conversations to longer-term objectives
+- **Pattern Recognition**: Identify recurring themes and behaviors
+- **Strategic Suggestions**: Proactive recommendations based on memory patterns
+- **Analytics Dashboard**: Insights into conversation patterns and productivity
 
 ### Phase 4: Advanced Integration 🔮 Future
 
@@ -111,6 +122,8 @@ vy/
 
 - Node.js 18+ and npm
 - Git
+- OpenAI API key for embeddings
+- ChromaDB instance (local or hosted)
 - (Optional) Global Turborepo CLI: `npm install -g turbo`
 
 ### Quick Start
@@ -122,6 +135,13 @@ cd vy
 
 # Install dependencies
 npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your OpenAI API key
+
+# Start ChromaDB (local development)
+docker run -p 8000:8000 chromadb/chroma
 
 # Run development mode for all packages
 turbo dev
@@ -136,6 +156,23 @@ turbo test
 turbo lint
 ```
 
+### Environment Variables
+
+```bash
+# Required
+VY_OPENAI_API_KEY=your_openai_api_key_here
+
+# Optional (with defaults for local development)
+VY_CHROMA_HOST=localhost
+VY_CHROMA_PORT=8000
+VY_EMBEDDING_MODEL=text-embedding-3-small
+VY_COLLECTION_NAME=vy_memories
+
+# Required for hosted/production environments
+VY_CHROMA_API_KEY=your_chroma_api_key
+VY_CHROMA_SSL=true
+```
+
 ### Package-Specific Commands
 
 ```bash
@@ -145,29 +182,52 @@ turbo build --filter=vector-store
 turbo test --filter=core
 ```
 
-## 🧠 Core Concepts
+## 🧠 Core Concepts & Design Decisions
 
-### Memory Types
+### Two-Layer Memory Architecture
 
-- **Conversations**: Complete conversation threads with context
-- **Documents**: Processed documents with extracted insights
-- **Insights**: Derived patterns and connections
-- **Tasks**: Extracted action items with context
+**Session Memory (Raw, Current)**:
 
-### Semantic Search
+- Full conversation fidelity during active sessions
+- Available for context and clarification
+- Discarded after insight extraction
 
-- Vector embeddings for content similarity
-- Metadata filtering for precise queries
-- Temporal relevance weighting
-- Context-aware ranking
+**Long-term Memory (Processed, Persistent)**:
+
+- Extracted insights, learnings, and key facts
+- Optimized for semantic search and retrieval
+- Condensed to overcome context window limitations
+
+### Memory Types (Extensible Design)
+
+- **Conversations** (Phase 1): Complete conversation threads with metadata
+- **Insights** (Phase 2): Derived patterns and strategic learnings
+- **Learnings** (Phase 2): Specific knowledge and facts
+- **Facts** (Phase 2): Verifiable information and preferences
+- **Action Items** (Phase 2): Extracted tasks and TODOs
+
+### Vector Storage Strategy
+
+- **Single Collection**: `vy_memories` with type-based metadata filtering
+- **OpenAI Embeddings**: text-embedding-3-small (1536D, cost-optimal)
+- **Embed at Storage**: Generate embeddings when storing memories
+- **Rich Metadata**: Support temporal, type, and custom filtering
+
+### Configuration Patterns
+
+- **Local Development**: `createLocalConfig()` - no auth required
+- **Hosted Production**: `createHostedConfig()` - explicit auth requirements
+- **Environment Variables**: Standard deployment pattern
+- **Validation**: Type-safe configuration with clear error messages
 
 ### MCP Integration
 
-The Model Context Protocol allows Vy to integrate seamlessly with AI assistants, providing:
+The Model Context Protocol provides:
 
-- Tool definitions for memory operations
-- Resource management for stored content
-- Prompt integration for context-aware responses
+- **Three Core Tools**: `capture_conversation`, `search_memory`, `get_context`
+- **Resource Exposure**: Access to stored memories as resources
+- **Context Injection**: Intelligent memory retrieval for new conversations
+- **Type-Safe Interfaces**: Full TypeScript definitions for all operations
 
 ## 📚 Documentation
 
@@ -178,32 +238,46 @@ The Model Context Protocol allows Vy to integrate seamlessly with AI assistants,
 
 ## 🤝 Development Philosophy
 
-This project emphasizes:
+This project demonstrates:
 
-- **Learning-Oriented Development**: Opportunities for hands-on implementation
+- **Learning-Oriented Development**: Hands-on experience with modern TypeScript patterns
+- **Design-First Approach**: Thoughtful architecture decisions before implementation
 - **Modern Best Practices**: Current patterns over legacy compatibility
-- **Clean Architecture**: Maintainable, well-documented code
+- **Clean Architecture**: Domain-driven design with clear separation of concerns
 - **Iterative Progress**: Phased development with working increments
+- **Living Documentation**: READMEs and code that evolve together
 
 ## 📈 Current Status
 
-**Phase 1 Progress**:
+**Phase 1 Progress** (MVP Foundation):
 
-- ✅ Initial Turborepo setup
-- ⏳ Core types and interfaces
-- ⏳ ChromaDB abstraction layer
-- ⏳ Basic MCP server implementation
-- ⏳ CLI testing tool
-- ⏳ Documentation framework
+- ✅ Turborepo monorepo setup with shared configs
+- ✅ Core domain types and interfaces (`@repo/core`)
+- ✅ Configuration system with local/hosted patterns
+- ✅ OpenAI embedding service implementation
+- ✅ ChromaDB client wrapper with connection management
+- 🔄 High-level MemoryStore implementation
+- ⏳ MCP server with tool handlers
+- ⏳ CLI testing application
+- ⏳ Unit and integration test suites
+
+**Key Accomplishments**:
+
+- Comprehensive type system supporting future extensibility
+- Clean separation between vector operations and domain logic
+- Environment-based configuration supporting multiple deployment patterns
+- Modern TypeScript patterns (discriminated unions, factory functions, etc.)
 
 ## 🔗 Key Dependencies
 
 - **@modelcontextprotocol/sdk**: MCP protocol implementation
 - **chromadb**: Vector database for semantic storage
-- **@types/node**: TypeScript support for Node.js
-- **turborepo**: Monorepo build system
-- **typescript**: Static type checking
-- **eslint**: Code linting
+- **OpenAI API**: Text embedding generation (text-embedding-3-small)
+- **turborepo**: Monorepo build system and task orchestration
+- **typescript**: Static type checking and modern language features
+- **tsup**: Fast TypeScript bundling for library packages
+- **vitest**: Modern testing framework
+- **eslint**: Code linting with modern flat config
 - **prettier**: Code formatting
 
 ## 📄 License
