@@ -10,10 +10,11 @@
  * - Simulate client interactions for integration testing
  */
 
-export * from './cli.js';
-export * from './mock-data.js';
-export * from './test-client.js';
-export * from './test-scenarios.js';
+export * from "./cli.js";
+// Mock data and test utilities will be added in Phase 2
+// export * from './mock-data.js';
+// export * from './test-client.js';
+// export * from './test-scenarios.js';
 
 /**
  * Test result interfaces
@@ -44,15 +45,15 @@ export interface CliConfig {
   serverPath?: string;
   timeout?: number;
   verbose?: boolean;
-  logLevel?: 'debug' | 'info' | 'warn' | 'error';
+  logLevel?: "debug" | "info" | "warn" | "error";
 }
 
 /**
  * Default configuration
  */
 export const DEFAULT_CLI_CONFIG: Required<CliConfig> = {
-  serverPath: '../mcp-server-basic/dist/cli.js',
+  serverPath: "../mcp-server-basic/dist/cli.js",
   timeout: 30000, // 30 seconds
   verbose: false,
-  logLevel: 'info'
+  logLevel: "info",
 };

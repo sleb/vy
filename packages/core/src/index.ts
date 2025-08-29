@@ -18,6 +18,9 @@ export * from "./types/vector-store.js";
 // MCP protocol definitions
 export * from "./types/mcp.js";
 
+// Configuration types and utilities
+export * from "./config/index.js";
+
 // Re-export commonly used types for convenience
 export type {
   ConversationMemory,
