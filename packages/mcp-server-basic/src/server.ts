@@ -9,6 +9,8 @@
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import {
   createChromaClient,
   createChromaMemoryStore,
@@ -77,19 +79,12 @@ export class VyMcpServer {
   /**
    * Initialize server dependencies and register tools
    *
-   * TODO: We'll implement this together! This should:
+   * This method sets up the complete dependency chain:
    * 1. Create and initialize the ChromaMemoryStore
    * 2. Create the MemoryService with dependencies
    * 3. Create the tool handlers
    * 4. Register MCP tools with the server
    * 5. Set up error handlers
-   * 6. Validate that everything is working
-   *
-   * Learning opportunities:
-   * - Dependency injection patterns
-   * - Async initialization patterns
-   * - MCP tool registration
-   * - Error handling in server setup
    */
   async initialize(): Promise<void> {
     this.logger.info("Initializing Vy MCP Server...");
@@ -152,38 +147,27 @@ export class VyMcpServer {
   /**
    * Connect to MCP transport and start serving
    *
-   * TODO: We'll implement this together! This should:
-   * 1. Ensure server is initialized
-   * 2. Connect to the provided transport
-   * 3. Update server state
-   * 4. Set up graceful shutdown handlers
-   * 5. Log server startup information
-   *
-   * Learning opportunities:
-   * - MCP transport integration
-   * - Server lifecycle management
-   * - Graceful shutdown patterns
-   * - Process signal handling
+   * This method completes the server startup process:
+   * 1. Validates server is properly initialized
+   * 2. Connects to the provided MCP transport
+   * 3. Updates server state to running
+   * 4. Logs successful startup
    */
-  async connect(transport: any): Promise<void> {
+  async connect(transport: Transport): Promise<void> {
     if (!this.memoryStore || !this.memoryService || !this.toolHandlers) {
       throw new Error("Server must be initialized before connecting");
     }
 
     try {
       this.logger.info("Connecting to MCP transport...");
+      await this.server.connect(transport);
 
-      // TODO: Connect server to transport
-      // await this.server.connect(transport);
-
-      // TODO: Update server state
-      // this.state.isRunning = true;
-      // this.state.startTime = new Date();
-
-      // TODO: Log successful startup
-      // this.logger.info('Vy MCP Server is running', { ... });
-
-      throw new Error("Not implemented yet - we'll do this together!");
+      this.state.isRunning = true;
+      this.state.startTime = new Date();
+      this.logger.info("Vy MCP Server is running", {
+        startTime: this.state.startTime,
+        running: this.state.isRunning,
+      });
     } catch (error) {
       this.state.lastError =
         error instanceof Error ? error : new Error(String(error));
@@ -195,37 +179,36 @@ export class VyMcpServer {
   /**
    * Register MCP tools with the server
    *
-   * TODO: We'll implement this together! This should:
-   * 1. Register the capture_conversation tool
-   * 2. Register the search_memory tool
-   * 3. Register the get_context tool
-   * 4. Set up tool call handlers that route to our tool handlers
-   * 5. Add request/response logging and metrics
-   *
-   * Learning opportunities:
-   * - MCP tool registration patterns
-   * - Request routing and middleware
-   * - Observability and metrics collection
-   * - Tool schema validation
+   * Registers all three core tools with the MCP protocol:
+   * - capture_conversation: Store conversations in semantic memory
+   * - search_memory: Search stored memories with semantic similarity
+   * - get_context: Retrieve relevant context for AI injection
    */
   private registerTools(): void {
     this.logger.debug("Registering MCP tools...");
 
     try {
-      // TODO: Register capture_conversation tool
-      // this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      //   if (request.params.name === 'capture_conversation') {
-      //     return this.handleToolCall('capture_conversation', request.params.arguments);
-      //   }
-      // });
+      this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+        const toolName = request.params.name;
+        const toolArgs = request.params.arguments;
+        this.logger.debug("Received tool call", { toolName, toolArgs });
 
-      // TODO: Register search_memory tool
+        switch (toolName) {
+          case "capture_conversation":
+            return await this.handleToolCall("capture_conversation", toolArgs);
+          case "search_memory":
+            return await this.handleToolCall("search_memory", toolArgs);
+          case "get_context":
+            return await this.handleToolCall("get_context", toolArgs);
+          default:
+            throw new Error(`Unknown tool: ${toolName}`);
+        }
+      });
 
-      // TODO: Register get_context tool
-
-      // TODO: Add catch-all handler for unknown tools
-
-      throw new Error("Not implemented yet - we'll do this together!");
+      this.logger.debug("MCP tools registered successfully", {
+        toolCount: 3,
+        tools: ["capture_conversation", "search_memory", "get_context"],
+      });
     } catch (error) {
       this.logger.error(
         "Failed to register tools",
@@ -233,26 +216,25 @@ export class VyMcpServer {
       );
       throw error;
     }
+
+    this.logger.info("MCP tools registered", {
+      tools: ["capture_conversation", "search_memory", "get_context"],
+    });
   }
 
   /**
    * Handle individual tool calls with logging and error handling
    *
-   * TODO: We'll implement this together! This should:
-   * 1. Log the incoming tool call
-   * 2. Validate the tool name
-   * 3. Route to the appropriate tool handler
-   * 4. Handle any errors gracefully
-   * 5. Log the response and update metrics
-   * 6. Return properly formatted MCP response
-   *
-   * Learning opportunities:
-   * - Request/response middleware patterns
-   * - Error handling and user experience
-   * - Metrics and observability
-   * - MCP response formatting
+   * This method provides:
+   * - Request lifecycle tracking (timing, metrics)
+   * - Tool validation and routing
+   * - Comprehensive error handling and logging
+   * - Performance monitoring
    */
-  private async handleToolCall(toolName: string, args: unknown): Promise<any> {
+  private async handleToolCall(
+    toolName: string,
+    args: unknown,
+  ): Promise<unknown> {
     const startTime = Date.now();
     this.state.toolCallCount++;
 
@@ -266,19 +248,28 @@ export class VyMcpServer {
         throw new Error("Tool handlers not initialized");
       }
 
-      // TODO: Route to appropriate tool handler
-      // switch (toolName) {
-      //   case 'capture_conversation':
-      //     return await this.toolHandlers.captureConversation(args);
-      //   case 'search_memory':
-      //     return await this.toolHandlers.searchMemory(args);
-      //   case 'get_context':
-      //     return await this.toolHandlers.getContext(args);
-      //   default:
-      //     throw new Error(`Unknown tool: ${toolName}`);
-      // }
+      let result: unknown;
+      switch (toolName) {
+        case "capture_conversation":
+          result = await this.toolHandlers.captureConversation(args);
+          break;
+        case "search_memory":
+          result = await this.toolHandlers.searchMemory(args);
+          break;
+        case "get_context":
+          result = await this.toolHandlers.getContext(args);
+          break;
+        default:
+          throw new Error(`Unknown tool: ${toolName}`);
+      }
+      const duration = Date.now() - startTime;
+      this.logger.info("Tool call completed successfully", {
+        toolName,
+        duration,
+        callNumber: this.state.toolCallCount,
+      });
 
-      throw new Error("Not implemented yet - we'll do this together!");
+      return result;
     } catch (error) {
       const duration = Date.now() - startTime;
       this.logger.error(
@@ -291,7 +282,6 @@ export class VyMcpServer {
         },
       );
 
-      // TODO: Return formatted error response
       throw error;
     }
   }
