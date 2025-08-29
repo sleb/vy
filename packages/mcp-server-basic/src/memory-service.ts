@@ -6,20 +6,16 @@
  */
 
 import type {
-    CaptureConversationArgs,
-    CaptureConversationResult,
-    GetContextArgs,
-    GetContextResult,
-    SearchMemoryArgs,
-    SearchMemoryResult
-} from '@repo/core';
-import type { ChromaMemoryStore } from '@repo/vector-store';
-import type {
-    Logger,
-    MemoryServiceDeps,
-    ServerConfig,
-    ToolExecutionError
-} from './types.js';
+  CaptureConversationArgs,
+  CaptureConversationResult,
+  GetContextArgs,
+  GetContextResult,
+  SearchMemoryArgs,
+  SearchMemoryResult,
+} from "@repo/core";
+import type { ChromaMemoryStore } from "@repo/vector-store";
+import type { Logger, MemoryServiceDeps, ServerConfig } from "./types.js";
+import { ToolExecutionError } from "./types.js";
 
 /**
  * MemoryService handles the business logic for all memory operations
@@ -59,12 +55,14 @@ export class MemoryService {
    * - Error handling and recovery
    * - Business rule enforcement
    */
-  async captureConversation(args: CaptureConversationArgs): Promise<CaptureConversationResult> {
-    this.logger.info('Capturing conversation', {
+  async captureConversation(
+    args: CaptureConversationArgs,
+  ): Promise<CaptureConversationResult> {
+    this.logger.info("Capturing conversation", {
       conversationLength: args.conversation.length,
       hasParticipants: !!args.participants?.length,
       hasMetadata: !!args.metadata,
-      hasTags: !!args.tags?.length
+      hasTags: !!args.tags?.length,
     });
 
     try {
@@ -73,12 +71,16 @@ export class MemoryService {
       // TODO: Call store.storeMemory()
       // TODO: Return success result
 
-      throw new Error('Not implemented yet - we\'ll do this together!');
+      throw new Error("Not implemented yet - we'll do this together!");
     } catch (error) {
-      this.logger.error('Failed to capture conversation', error);
-      throw new ToolExecutionError('capture_conversation',
-        error instanceof Error ? error.message : 'Unknown error',
-        { args }
+      this.logger.error(
+        "Failed to capture conversation",
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      throw new ToolExecutionError(
+        "capture_conversation",
+        error instanceof Error ? error.message : "Unknown error",
+        { args },
       );
     }
   }
@@ -101,12 +103,13 @@ export class MemoryService {
    * - User experience optimization
    */
   async searchMemory(args: SearchMemoryArgs): Promise<SearchMemoryResult> {
-    this.logger.info('Searching memory', {
-      query: args.query.substring(0, 100) + (args.query.length > 100 ? '...' : ''),
+    this.logger.info("Searching memory", {
+      query:
+        args.query.substring(0, 100) + (args.query.length > 100 ? "..." : ""),
       limit: args.limit,
       types: args.types,
       timeRange: args.timeRange,
-      minRelevanceScore: args.minRelevanceScore
+      minRelevanceScore: args.minRelevanceScore,
     });
 
     const startTime = Date.now();
@@ -119,12 +122,16 @@ export class MemoryService {
       // TODO: Format results for MCP
       // TODO: Calculate search time
 
-      throw new Error('Not implemented yet - we\'ll do this together!');
+      throw new Error("Not implemented yet - we'll do this together!");
     } catch (error) {
-      this.logger.error('Failed to search memory', error);
-      throw new ToolExecutionError('search_memory',
-        error instanceof Error ? error.message : 'Unknown error',
-        { args, searchTime: Date.now() - startTime }
+      this.logger.error(
+        "Failed to search memory",
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      throw new ToolExecutionError(
+        "search_memory",
+        error instanceof Error ? error.message : "Unknown error",
+        { args, searchTime: Date.now() - startTime },
       );
     }
   }
@@ -146,11 +153,11 @@ export class MemoryService {
    * - Memory selection heuristics
    */
   async getContext(args: GetContextArgs): Promise<GetContextResult> {
-    this.logger.info('Getting context', {
+    this.logger.info("Getting context", {
       hasCurrentQuery: !!args.currentQuery,
       recentMessageCount: args.recentMessages?.length || 0,
       maxMemories: args.maxMemories,
-      maxTokens: args.maxTokens
+      maxTokens: args.maxTokens,
     });
 
     try {
@@ -162,12 +169,16 @@ export class MemoryService {
       // TODO: Estimate token usage
       // TODO: Provide selection reasoning
 
-      throw new Error('Not implemented yet - we\'ll do this together!');
+      throw new Error("Not implemented yet - we'll do this together!");
     } catch (error) {
-      this.logger.error('Failed to get context', error);
-      throw new ToolExecutionError('get_context',
-        error instanceof Error ? error.message : 'Unknown error',
-        { args }
+      this.logger.error(
+        "Failed to get context",
+        error instanceof Error ? error : new Error(String(error)),
+      );
+      throw new ToolExecutionError(
+        "get_context",
+        error instanceof Error ? error.message : "Unknown error",
+        { args },
       );
     }
   }
@@ -178,13 +189,13 @@ export class MemoryService {
    * Validate conversation input
    */
   private validateConversationInput(args: CaptureConversationArgs): void {
-    if (!args.conversation || typeof args.conversation !== 'string') {
-      throw new Error('Conversation content is required and must be a string');
+    if (!args.conversation || typeof args.conversation !== "string") {
+      throw new Error("Conversation content is required and must be a string");
     }
 
     if (args.conversation.length > this.config.limits.maxConversationLength) {
       throw new Error(
-        `Conversation exceeds maximum length of ${this.config.limits.maxConversationLength} characters`
+        `Conversation exceeds maximum length of ${this.config.limits.maxConversationLength} characters`,
       );
     }
 
@@ -211,11 +222,15 @@ export class MemoryService {
   /**
    * Generate a snippet from content for search results
    */
-  private generateSnippet(content: string, query: string, maxLength: number = 200): string {
+  private generateSnippet(
+    content: string,
+    query: string,
+    maxLength: number = 200,
+  ): string {
     // TODO: We'll implement intelligent snippet generation
     // For now, just truncate
     return content.length > maxLength
-      ? content.substring(0, maxLength) + '...'
+      ? content.substring(0, maxLength) + "..."
       : content;
   }
 
@@ -235,11 +250,11 @@ export class MemoryService {
 export async function createMemoryService(
   store: ChromaMemoryStore,
   config: ServerConfig,
-  logger: Logger
+  logger: Logger,
 ): Promise<MemoryService> {
   return new MemoryService({
     store,
     config,
-    logger
+    logger,
   });
 }

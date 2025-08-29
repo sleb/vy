@@ -62,21 +62,23 @@ export class ChromaClient {
 
     try {
       // Dynamic import of ChromaDB client (it's a heavy dependency)
-      const { ChromaApi, Configuration } = await import("chromadb");
+      const { ChromaClient } = await import("chromadb");
 
       // Determine if this is hosted or local config
       const isHosted = "apiKey" in this.config && "ssl" in this.config;
 
-      const configuration = new Configuration({
-        basePath: `${isHosted ? "https" : "http"}://${this.config.host}:${this.config.port}`,
-        ...(isHosted && {
-          headers: {
-            Authorization: `Bearer ${this.config.apiKey}`,
-          },
-        }),
-      });
+      const clientOptions: any = {
+        path: `${isHosted ? "https" : "http"}://${this.config.host}:${this.config.port}`,
+      };
 
-      this.client = new ChromaApi(configuration);
+      if (isHosted && "apiKey" in this.config) {
+        clientOptions.auth = {
+          provider: "token",
+          credentials: this.config.apiKey,
+        };
+      }
+
+      this.client = new ChromaClient(clientOptions);
 
       // Test connection
       await this.client.heartbeat();

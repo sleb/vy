@@ -188,22 +188,17 @@ export class VyMcpServer {
     this.logger.debug("Registering MCP tools...");
 
     try {
-      this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
-        const toolName = request.params.name;
-        const toolArgs = request.params.arguments;
-        this.logger.debug("Received tool call", { toolName, toolArgs });
+      this.server.setRequestHandler(
+        CallToolRequestSchema,
+        async (request, extra) => {
+          const toolName = request.params.name;
+          const toolArgs = request.params.arguments;
+          this.logger.debug("Received tool call", { toolName, toolArgs });
 
-        switch (toolName) {
-          case "capture_conversation":
-            return await this.handleToolCall("capture_conversation", toolArgs);
-          case "search_memory":
-            return await this.handleToolCall("search_memory", toolArgs);
-          case "get_context":
-            return await this.handleToolCall("get_context", toolArgs);
-          default:
-            throw new Error(`Unknown tool: ${toolName}`);
-        }
-      });
+          const result = await this.handleToolCall(toolName, toolArgs);
+          return { content: [{ type: "text", text: JSON.stringify(result) }] };
+        },
+      );
 
       this.logger.debug("MCP tools registered successfully", {
         toolCount: 3,
@@ -251,13 +246,13 @@ export class VyMcpServer {
       let result: unknown;
       switch (toolName) {
         case "capture_conversation":
-          result = await this.toolHandlers.captureConversation(args);
+          result = await this.toolHandlers.captureConversation(args as any);
           break;
         case "search_memory":
-          result = await this.toolHandlers.searchMemory(args);
+          result = await this.toolHandlers.searchMemory(args as any);
           break;
         case "get_context":
-          result = await this.toolHandlers.getContext(args);
+          result = await this.toolHandlers.getContext(args as any);
           break;
         default:
           throw new Error(`Unknown tool: ${toolName}`);

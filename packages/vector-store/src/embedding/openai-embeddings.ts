@@ -5,8 +5,8 @@
  * with batching, retry logic, and token estimation
  */
 
-import type { EmbeddingService } from '@repo/core';
-import type { OpenAIEmbeddingConfig } from '../config.js';
+import type { EmbeddingService } from "@repo/core";
+import type { OpenAIEmbeddingConfig } from "../config.js";
 
 /**
  * OpenAI API response types
@@ -28,7 +28,7 @@ interface OpenAIEmbeddingResponse {
  */
 export class OpenAIEmbeddingService implements EmbeddingService {
   private readonly config: OpenAIEmbeddingConfig;
-  private readonly baseUrl = 'https://api.openai.com/v1/embeddings';
+  private readonly baseUrl = "https://api.openai.com/v1/embeddings";
 
   constructor(config: OpenAIEmbeddingConfig) {
     this.config = config;
@@ -39,11 +39,15 @@ export class OpenAIEmbeddingService implements EmbeddingService {
    */
   async generateEmbedding(text: string): Promise<number[]> {
     if (!text.trim()) {
-      throw new Error('Cannot generate embedding for empty text');
+      throw new Error("Cannot generate embedding for empty text");
     }
 
     const embeddings = await this.generateEmbeddings([text]);
-    return embeddings[0];
+    const embedding = embeddings[0];
+    if (!embedding) {
+      throw new Error("Failed to generate embedding - no result returned");
+    }
+    return embedding;
   }
 
   /**
@@ -55,9 +59,9 @@ export class OpenAIEmbeddingService implements EmbeddingService {
     }
 
     // Filter out empty texts
-    const nonEmptyTexts = texts.filter(text => text.trim());
+    const nonEmptyTexts = texts.filter((text) => text.trim());
     if (nonEmptyTexts.length === 0) {
-      throw new Error('Cannot generate embeddings for all empty texts');
+      throw new Error("Cannot generate embeddings for all empty texts");
     }
 
     // Process in batches if necessary
@@ -102,8 +106,14 @@ export class OpenAIEmbeddingService implements EmbeddingService {
    * Check if batch can be processed within token limits
    */
   canProcessBatch(texts: string[]): boolean {
-    const totalTokens = texts.reduce((sum, text) => sum + this.estimateTokens(text), 0);
-    return totalTokens <= this.config.maxTokens && texts.length <= this.config.batchSize;
+    const totalTokens = texts.reduce(
+      (sum, text) => sum + this.estimateTokens(text),
+      0,
+    );
+    return (
+      totalTokens <= this.config.maxTokens &&
+      texts.length <= this.config.batchSize
+    );
   }
 
   /**
@@ -128,14 +138,14 @@ export class OpenAIEmbeddingService implements EmbeddingService {
     const requestBody = {
       input: texts,
       model: this.config.model,
-      encoding_format: 'float' as const,
+      encoding_format: "float" as const,
     };
 
     const response = await fetch(this.baseUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${this.config.apiKey}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${this.config.apiKey}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(requestBody),
     });
@@ -167,6 +177,8 @@ export class OpenAIEmbeddingService implements EmbeddingService {
 /**
  * Factory function to create OpenAI embedding service
  */
-export function createOpenAIEmbeddingService(config: OpenAIEmbeddingConfig): OpenAIEmbeddingService {
+export function createOpenAIEmbeddingService(
+  config: OpenAIEmbeddingConfig,
+): OpenAIEmbeddingService {
   return new OpenAIEmbeddingService(config);
 }

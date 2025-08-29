@@ -6,19 +6,19 @@
  */
 
 import type {
-    BatchOperationResult,
-    EmbeddingService,
-    Memory,
-    MemoryId,
-    MemoryStore,
-    MemoryStoreStats,
-    MemoryType,
-    SearchQuery,
-    SearchResult,
-} from '@repo/core';
-import { v7 as uuidv7 } from 'uuid';
+  BatchOperationResult,
+  EmbeddingService,
+  Memory,
+  MemoryId,
+  MemoryStore,
+  MemoryStoreStats,
+  MemoryType,
+  SearchQuery,
+  SearchResult,
+} from "@repo/core";
+import { v7 as uuidv7 } from "uuid";
 
-import type { ChromaClient, ChromaDocument } from './chroma-client.js';
+import type { ChromaClient, ChromaDocument } from "./chroma-client.js";
 
 /**
  * Failed embedding record for reprocessing
@@ -60,7 +60,9 @@ export class ChromaMemoryStore implements MemoryStore {
 
     try {
       // Generate embedding for the content
-      const embedding = await this.embeddingService.generateEmbedding(memory.content);
+      const embedding = await this.embeddingService.generateEmbedding(
+        memory.content,
+      );
 
       // Convert to ChromaDB document format
       const document = this.memoryToDocument(memoryWithId, embedding);
@@ -70,7 +72,6 @@ export class ChromaMemoryStore implements MemoryStore {
 
       // Remove from failed embeddings if it was previously failed
       this.failedEmbeddings.delete(memoryId);
-
     } catch (embeddingError) {
       // Store memory without embedding so we don't lose the data
       const document = this.memoryToDocument(memoryWithId, []);
@@ -85,7 +86,10 @@ export class ChromaMemoryStore implements MemoryStore {
         retryCount: 0,
       });
 
-      console.warn(`Failed to generate embedding for memory ${memoryId}, stored without embedding:`, embeddingError);
+      console.warn(
+        `Failed to generate embedding for memory ${memoryId}, stored without embedding:`,
+        embeddingError,
+      );
     }
   }
 
@@ -103,10 +107,10 @@ export class ChromaMemoryStore implements MemoryStore {
     for (const memory of memories) {
       try {
         await this.storeMemory(memory);
-        results.successful.push(memory.id || 'unknown');
+        results.successful.push(memory.id || "unknown");
       } catch (error) {
         results.failed.push({
-          id: memory.id || 'unknown',
+          id: memory.id || "unknown",
           error: String(error),
         });
       }
@@ -120,8 +124,14 @@ export class ChromaMemoryStore implements MemoryStore {
    */
   async getMemory(id: MemoryId): Promise<Memory | null> {
     try {
-      const documents = await this.chromaClient.getDocuments(this.collectionName, [id]);
-      return documents.length > 0 ? this.documentToMemory(documents[0]) : null;
+      const documents = await this.chromaClient.getDocuments(
+        this.collectionName,
+        [id],
+      );
+      if (documents.length === 0) return null;
+      const doc = documents[0];
+      if (!doc) return null;
+      return this.documentToMemory(doc);
     } catch (error) {
       throw new Error(`Failed to get memory ${id}: ${error}`);
     }
@@ -134,11 +144,14 @@ export class ChromaMemoryStore implements MemoryStore {
     if (ids.length === 0) return [];
 
     try {
-      const documents = await this.chromaClient.getDocuments(this.collectionName, ids);
+      const documents = await this.chromaClient.getDocuments(
+        this.collectionName,
+        ids,
+      );
 
       // Ensure results are in the same order as requested IDs
-      const documentMap = new Map(documents.map(doc => [doc.id, doc]));
-      return ids.map(id => {
+      const documentMap = new Map(documents.map((doc) => [doc.id, doc]));
+      return ids.map((id) => {
         const doc = documentMap.get(id);
         return doc ? this.documentToMemory(doc) : null;
       });
@@ -156,14 +169,16 @@ export class ChromaMemoryStore implements MemoryStore {
       throw new Error(`Memory ${id} not found`);
     }
 
-    const updated = { ...existing, ...updates, id };
+    const updated = { ...existing, ...updates, id } as Memory;
 
     try {
       // Regenerate embedding if content changed
       let embedding = existing.embedding || [];
       if (updates.content && updates.content !== existing.content) {
         try {
-          embedding = await this.embeddingService.generateEmbedding(updates.content);
+          embedding = await this.embeddingService.generateEmbedding(
+            updates.content,
+          );
           this.failedEmbeddings.delete(id); // Remove from failed list if successful
         } catch (embeddingError) {
           // Keep old embedding, track failure
@@ -174,7 +189,10 @@ export class ChromaMemoryStore implements MemoryStore {
             error: String(embeddingError),
             retryCount: (this.failedEmbeddings.get(id)?.retryCount || 0) + 1,
           });
-          console.warn(`Failed to update embedding for memory ${id}:`, embeddingError);
+          console.warn(
+            `Failed to update embedding for memory ${id}:`,
+            embeddingError,
+          );
         }
       }
 
@@ -209,7 +227,7 @@ export class ChromaMemoryStore implements MemoryStore {
       await this.chromaClient.deleteDocuments(this.collectionName, ids);
 
       // Clean up failed embeddings
-      ids.forEach(id => this.failedEmbeddings.delete(id));
+      ids.forEach((id) => this.failedEmbeddings.delete(id));
 
       return {
         successful: ids,
@@ -219,7 +237,7 @@ export class ChromaMemoryStore implements MemoryStore {
     } catch (error) {
       return {
         successful: [],
-        failed: ids.map(id => ({ id, error: String(error) })),
+        failed: ids.map((id) => ({ id, error: String(error) })),
         totalProcessed: ids.length,
       };
     }
@@ -236,7 +254,9 @@ export class ChromaMemoryStore implements MemoryStore {
 
     try {
       // Generate embedding for search query
-      const queryEmbedding = await this.embeddingService.generateEmbedding(query.query);
+      const queryEmbedding = await this.embeddingService.generateEmbedding(
+        query.query,
+      );
 
       // Perform vector similarity search
       const results = await this.chromaClient.queryCollection(
@@ -248,12 +268,16 @@ export class ChromaMemoryStore implements MemoryStore {
       // Convert ChromaDB results to SearchResult<Memory>
       const searchResults: SearchResult<Memory>[] = [];
 
-      if (results.ids.length > 0) {
+      // Process search results
+      if (results.ids.length > 0 && results.ids[0]) {
         for (let i = 0; i < results.ids[0].length; i++) {
           const id = results.ids[0][i];
+          if (!id) continue;
+
           const distance = results.distances?.[0]?.[i] || 1.0;
           const metadata = results.metadatas?.[0]?.[i] || {};
-          const document = results.documents?.[0]?.[i] || '';
+          const document = results.documents?.[0]?.[i];
+          if (!document) continue;
 
           // Convert distance to similarity score (0-1, higher = more similar)
           const similarity = Math.max(0, 1 - distance);
@@ -264,7 +288,11 @@ export class ChromaMemoryStore implements MemoryStore {
           }
 
           // Reconstruct memory from ChromaDB data
-          const memory = this.reconstructMemoryFromSearch(id, document, metadata);
+          const memory = this.reconstructMemoryFromSearch(
+            id,
+            document,
+            metadata,
+          );
 
           searchResults.push({
             id,
@@ -284,7 +312,10 @@ export class ChromaMemoryStore implements MemoryStore {
   /**
    * Find similar memories to a given memory
    */
-  async findSimilarMemories(memoryId: MemoryId, limit?: number): Promise<SearchResult<Memory>[]> {
+  async findSimilarMemories(
+    memoryId: MemoryId,
+    limit?: number,
+  ): Promise<SearchResult<Memory>[]> {
     const memory = await this.getMemory(memoryId);
     if (!memory) {
       throw new Error(`Memory ${memoryId} not found`);
@@ -310,13 +341,20 @@ export class ChromaMemoryStore implements MemoryStore {
       );
 
       const memories: Memory[] = [];
-      if (results.ids.length > 0) {
+      // Process results
+      if (results.ids.length > 0 && results.ids[0]) {
         for (let i = 0; i < results.ids[0].length; i++) {
           const id = results.ids[0][i];
-          const document = results.documents?.[0]?.[i] || '';
+          if (!id) continue;
+
+          const document = results.documents?.[0]?.[i];
+          if (!document) continue;
+
           const metadata = results.metadatas?.[0]?.[i] || {};
 
-          memories.push(this.reconstructMemoryFromSearch(id, document, metadata));
+          memories.push(
+            this.reconstructMemoryFromSearch(id, document, metadata),
+          );
         }
       }
 
@@ -332,13 +370,13 @@ export class ChromaMemoryStore implements MemoryStore {
   async getRecentMemories(limit?: number, maxAge?: number): Promise<Memory[]> {
     // Simple implementation - get all and sort by timestamp
     // Can optimize with time-based filtering later
-    const memories = await this.getMemoriesByType('conversation', limit || 50);
+    const memories = await this.getMemoriesByType("conversation", limit || 50);
 
     // Filter by max age if specified
     if (maxAge) {
       const cutoff = new Date(Date.now() - maxAge);
       return memories
-        .filter(memory => memory.timestamp >= cutoff)
+        .filter((memory) => memory.timestamp >= cutoff)
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
         .slice(0, limit || 50);
     }
@@ -392,20 +430,26 @@ export class ChromaMemoryStore implements MemoryStore {
     return {
       totalMemories,
       memoriesByType,
-      oldestMemory: oldestMemories.length > 0 ?
-        oldestMemories[oldestMemories.length - 1].timestamp : new Date(),
-      newestMemory: recentMemories.length > 0 ?
-        recentMemories[0].timestamp : new Date(),
+      oldestMemory:
+        oldestMemories.length > 0 && oldestMemories[oldestMemories.length - 1]
+          ? oldestMemories[oldestMemories.length - 1]!.timestamp
+          : new Date(),
+      newestMemory:
+        recentMemories.length > 0 && recentMemories[0]
+          ? recentMemories[0]!.timestamp
+          : new Date(),
       averageMemorySize: 0, // TODO: Calculate from actual data
       totalStorageSize: 0, // TODO: Get from ChromaDB if available
-      indexHealth: 'good' as const, // TODO: Implement health check
+      indexHealth: "good" as const, // TODO: Implement health check
     };
   }
 
   /**
    * Reprocess failed embeddings
    */
-  async reprocessFailedEmbeddings(maxRetries: number = 3): Promise<BatchOperationResult> {
+  async reprocessFailedEmbeddings(
+    maxRetries: number = 3,
+  ): Promise<BatchOperationResult> {
     const results: BatchOperationResult = {
       successful: [],
       failed: [],
@@ -423,13 +467,17 @@ export class ChromaMemoryStore implements MemoryStore {
 
       try {
         // Try to generate embedding again
-        const embedding = await this.embeddingService.generateEmbedding(failedEmbedding.content);
+        const embedding = await this.embeddingService.generateEmbedding(
+          failedEmbedding.content,
+        );
 
         // Update the memory with the new embedding
         const memory = await this.getMemory(memoryId);
         if (memory) {
           const document = this.memoryToDocument(memory, embedding);
-          await this.chromaClient.updateDocuments(this.collectionName, [document]);
+          await this.chromaClient.updateDocuments(this.collectionName, [
+            document,
+          ]);
 
           this.failedEmbeddings.delete(memoryId);
           results.successful.push(memoryId);
@@ -461,7 +509,7 @@ export class ChromaMemoryStore implements MemoryStore {
    */
   async optimizeStorage(): Promise<void> {
     // TODO: Implement storage optimization
-    console.log('Storage optimization not yet implemented');
+    console.log("Storage optimization not yet implemented");
   }
 
   /**
@@ -469,7 +517,7 @@ export class ChromaMemoryStore implements MemoryStore {
    */
   async rebuildIndex(): Promise<void> {
     // TODO: Implement index rebuilding
-    console.log('Index rebuilding not yet implemented');
+    console.log("Index rebuilding not yet implemented");
   }
 
   /**
@@ -482,7 +530,10 @@ export class ChromaMemoryStore implements MemoryStore {
   /**
    * Convert Memory to ChromaDB document format
    */
-  private memoryToDocument(memory: Memory, embedding: number[]): ChromaDocument {
+  private memoryToDocument(
+    memory: Memory,
+    embedding: number[],
+  ): ChromaDocument {
     return {
       id: memory.id,
       embedding,
@@ -492,7 +543,7 @@ export class ChromaMemoryStore implements MemoryStore {
         timestamp: memory.timestamp.toISOString(),
         ...memory.metadata,
         // Add type-specific metadata
-        ...(memory.type === 'conversation' && {
+        ...(memory.type === "conversation" && {
           participants: (memory as any).participants || [],
           messageCount: (memory as any).messageCount || 0,
           tags: (memory as any).tags || [],
@@ -505,7 +556,14 @@ export class ChromaMemoryStore implements MemoryStore {
    * Convert ChromaDB document to Memory object
    */
   private documentToMemory(document: ChromaDocument): Memory {
-    const { type, timestamp, participants, messageCount, tags, ...restMetadata } = document.metadata;
+    const {
+      type,
+      timestamp,
+      participants,
+      messageCount,
+      tags,
+      ...restMetadata
+    } = document.metadata;
 
     const baseMemory = {
       id: document.id,
@@ -517,12 +575,12 @@ export class ChromaMemoryStore implements MemoryStore {
     };
 
     // Add type-specific fields
-    if (type === 'conversation') {
+    if (type === "conversation") {
       return {
         ...baseMemory,
-        participants: participants as string[] || [],
-        messageCount: messageCount as number || 0,
-        tags: tags as string[] || [],
+        participants: (participants as string[]) || [],
+        messageCount: (messageCount as number) || 0,
+        tags: (tags as string[]) || [],
       } as any; // TODO: Improve typing
     }
 
@@ -541,7 +599,7 @@ export class ChromaMemoryStore implements MemoryStore {
 
     return {
       id,
-      type: (type as MemoryType) || 'conversation',
+      type: (type as MemoryType) || "conversation",
       content: document,
       timestamp: timestamp ? new Date(timestamp as string) : new Date(),
       metadata: restMetadata,
@@ -572,7 +630,7 @@ export class ChromaMemoryStore implements MemoryStore {
     }
 
     const snippet = content.substring(bestStart, bestStart + maxLength);
-    return bestStart > 0 ? '...' + snippet + '...' : snippet + '...';
+    return bestStart > 0 ? "..." + snippet + "..." : snippet + "...";
   }
 }
 
