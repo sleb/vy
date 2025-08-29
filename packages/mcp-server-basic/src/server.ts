@@ -8,13 +8,19 @@
  * - Dependency injection and service orchestration
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { createChromaMemoryStore } from '@repo/vector-store';
-import { createServerConfig, getConfigSummary } from './config.js';
-import { createLoggerFromConfig } from './logger.js';
-import { createMemoryService } from './memory-service.js';
-import { createToolHandlers } from './tools.js';
-import type { Logger, ServerConfig, ServerState } from './types.js';
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import {
+  createChromaClient,
+  createChromaMemoryStore,
+  createHostedConfig,
+  createLocalConfig,
+  createOpenAIEmbeddingService,
+} from "@repo/vector-store";
+import { createServerConfig, getConfigSummary } from "./config.js";
+import { createLoggerFromConfig } from "./logger.js";
+import { createMemoryService } from "./memory-service.js";
+import { createToolHandlers } from "./tools.js";
+import type { Logger, ServerConfig, ServerState } from "./types.js";
 
 /**
  * Vy MCP Server
@@ -46,7 +52,7 @@ export class VyMcpServer {
     this.state = {
       isRunning: false,
       startTime: new Date(),
-      toolCallCount: 0
+      toolCallCount: 0,
     };
 
     // Create MCP server instance
@@ -54,17 +60,17 @@ export class VyMcpServer {
       {
         name: this.config.name,
         version: this.config.version,
-        description: this.config.description
+        description: this.config.description,
       },
       {
         capabilities: {
-          tools: {}
-        }
-      }
+          tools: {},
+        },
+      },
     );
 
-    this.logger.info('Vy MCP Server created', {
-      config: getConfigSummary(this.config)
+    this.logger.info("Vy MCP Server created", {
+      config: getConfigSummary(this.config),
     });
   }
 
@@ -86,28 +92,59 @@ export class VyMcpServer {
    * - Error handling in server setup
    */
   async initialize(): Promise<void> {
-    this.logger.info('Initializing Vy MCP Server...');
+    this.logger.info("Initializing Vy MCP Server...");
 
     try {
-      // TODO: Initialize ChromaMemoryStore
-      // this.memoryStore = await createChromaMemoryStore(...);
+      // Step 1: Create vector store configuration from server config
+      this.logger.debug("Creating vector store configuration...");
+      const vectorConfig = this.createVectorStoreConfig();
 
-      // TODO: Initialize MemoryService
-      // this.memoryService = await createMemoryService(...);
+      // Step 2: Initialize ChromaDB client and embedding service
+      this.logger.debug(
+        "Initializing ChromaDB client and embedding service...",
+      );
+      const chromaClient = await createChromaClient(vectorConfig.chroma);
+      const embeddingService = createOpenAIEmbeddingService(
+        vectorConfig.embedding,
+      );
 
-      // TODO: Initialize tool handlers
-      // this.toolHandlers = createToolHandlers(...);
+      // Step 3: Create ChromaMemoryStore
+      this.logger.debug("Creating ChromaMemoryStore...");
+      this.memoryStore = await createChromaMemoryStore(
+        chromaClient,
+        embeddingService,
+        vectorConfig.collections.memories,
+      );
 
-      // TODO: Register MCP tools
-      // this.registerTools();
+      // Step 4: Initialize MemoryService with dependencies
+      this.logger.debug("Creating MemoryService...");
+      this.memoryService = await createMemoryService(
+        this.memoryStore,
+        this.config,
+        this.logger,
+      );
 
-      // TODO: Set up error handlers
-      // this.setupErrorHandlers();
+      // Step 5: Initialize tool handlers
+      this.logger.debug("Creating tool handlers...");
+      this.toolHandlers = createToolHandlers(this.memoryService, this.logger);
 
-      throw new Error('Not implemented yet - we\'ll do this together!');
+      // Step 6: Register MCP tools
+      this.logger.debug("Registering MCP tools...");
+      this.registerTools();
+
+      // Step 7: Set up error handlers
+      this.logger.debug("Setting up error handlers...");
+      this.setupErrorHandlers();
+
+      this.logger.info("Vy MCP Server initialization complete", {
+        hasMemoryStore: !!this.memoryStore,
+        hasMemoryService: !!this.memoryService,
+        hasToolHandlers: !!this.toolHandlers,
+      });
     } catch (error) {
-      this.state.lastError = error instanceof Error ? error : new Error(String(error));
-      this.logger.error('Failed to initialize server', this.state.lastError);
+      this.state.lastError =
+        error instanceof Error ? error : new Error(String(error));
+      this.logger.error("Failed to initialize server", this.state.lastError);
       throw error;
     }
   }
@@ -130,11 +167,11 @@ export class VyMcpServer {
    */
   async connect(transport: any): Promise<void> {
     if (!this.memoryStore || !this.memoryService || !this.toolHandlers) {
-      throw new Error('Server must be initialized before connecting');
+      throw new Error("Server must be initialized before connecting");
     }
 
     try {
-      this.logger.info('Connecting to MCP transport...');
+      this.logger.info("Connecting to MCP transport...");
 
       // TODO: Connect server to transport
       // await this.server.connect(transport);
@@ -146,10 +183,11 @@ export class VyMcpServer {
       // TODO: Log successful startup
       // this.logger.info('Vy MCP Server is running', { ... });
 
-      throw new Error('Not implemented yet - we\'ll do this together!');
+      throw new Error("Not implemented yet - we'll do this together!");
     } catch (error) {
-      this.state.lastError = error instanceof Error ? error : new Error(String(error));
-      this.logger.error('Failed to connect to transport', this.state.lastError);
+      this.state.lastError =
+        error instanceof Error ? error : new Error(String(error));
+      this.logger.error("Failed to connect to transport", this.state.lastError);
       throw error;
     }
   }
@@ -171,7 +209,7 @@ export class VyMcpServer {
    * - Tool schema validation
    */
   private registerTools(): void {
-    this.logger.debug('Registering MCP tools...');
+    this.logger.debug("Registering MCP tools...");
 
     try {
       // TODO: Register capture_conversation tool
@@ -187,9 +225,12 @@ export class VyMcpServer {
 
       // TODO: Add catch-all handler for unknown tools
 
-      throw new Error('Not implemented yet - we\'ll do this together!');
+      throw new Error("Not implemented yet - we'll do this together!");
     } catch (error) {
-      this.logger.error('Failed to register tools', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        "Failed to register tools",
+        error instanceof Error ? error : new Error(String(error)),
+      );
       throw error;
     }
   }
@@ -215,14 +256,14 @@ export class VyMcpServer {
     const startTime = Date.now();
     this.state.toolCallCount++;
 
-    this.logger.info('Handling tool call', {
+    this.logger.info("Handling tool call", {
       toolName,
-      callNumber: this.state.toolCallCount
+      callNumber: this.state.toolCallCount,
     });
 
     try {
       if (!this.toolHandlers) {
-        throw new Error('Tool handlers not initialized');
+        throw new Error("Tool handlers not initialized");
       }
 
       // TODO: Route to appropriate tool handler
@@ -237,14 +278,18 @@ export class VyMcpServer {
       //     throw new Error(`Unknown tool: ${toolName}`);
       // }
 
-      throw new Error('Not implemented yet - we\'ll do this together!');
+      throw new Error("Not implemented yet - we'll do this together!");
     } catch (error) {
       const duration = Date.now() - startTime;
-      this.logger.error(`Tool call failed: ${toolName}`, error instanceof Error ? error : new Error(String(error)), {
-        toolName,
-        duration,
-        callNumber: this.state.toolCallCount
-      });
+      this.logger.error(
+        `Tool call failed: ${toolName}`,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          toolName,
+          duration,
+          callNumber: this.state.toolCallCount,
+        },
+      );
 
       // TODO: Return formatted error response
       throw error;
@@ -257,20 +302,24 @@ export class VyMcpServer {
   private setupErrorHandlers(): void {
     this.server.onerror = (error) => {
       this.state.lastError = error;
-      this.logger.error('MCP Server error', error);
+      this.logger.error("MCP Server error", error);
     };
 
     // Handle uncaught exceptions
-    process.on('uncaughtException', (error) => {
-      this.logger.error('Uncaught exception', error);
+    process.on("uncaughtException", (error) => {
+      this.logger.error("Uncaught exception", error);
       this.shutdown(1);
     });
 
     // Handle unhandled promise rejections
-    process.on('unhandledRejection', (reason, promise) => {
-      this.logger.error('Unhandled promise rejection', new Error(String(reason)), {
-        promise: String(promise)
-      });
+    process.on("unhandledRejection", (reason, promise) => {
+      this.logger.error(
+        "Unhandled promise rejection",
+        new Error(String(reason)),
+        {
+          promise: String(promise),
+        },
+      );
       this.shutdown(1);
     });
   }
@@ -279,13 +328,13 @@ export class VyMcpServer {
    * Get server health status
    */
   getHealth(): {
-    status: 'healthy' | 'unhealthy';
+    status: "healthy" | "unhealthy";
     details: Record<string, unknown>;
   } {
     const isHealthy = this.state.isRunning && !this.state.lastError;
 
     return {
-      status: isHealthy ? 'healthy' : 'unhealthy',
+      status: isHealthy ? "healthy" : "unhealthy",
       details: {
         running: this.state.isRunning,
         uptime: Date.now() - this.state.startTime.getTime(),
@@ -293,8 +342,8 @@ export class VyMcpServer {
         lastError: this.state.lastError?.message,
         hasMemoryStore: !!this.memoryStore,
         hasMemoryService: !!this.memoryService,
-        hasToolHandlers: !!this.toolHandlers
-      }
+        hasToolHandlers: !!this.toolHandlers,
+      },
     };
   }
 
@@ -313,10 +362,10 @@ export class VyMcpServer {
    * Gracefully shutdown the server
    */
   async shutdown(exitCode: number = 0): Promise<void> {
-    this.logger.info('Shutting down Vy MCP Server...', {
+    this.logger.info("Shutting down Vy MCP Server...", {
       exitCode,
       uptime: Date.now() - this.state.startTime.getTime(),
-      toolCalls: this.state.toolCallCount
+      toolCalls: this.state.toolCallCount,
     });
 
     this.state.isRunning = false;
@@ -326,12 +375,67 @@ export class VyMcpServer {
       // TODO: Flush any pending operations
       // TODO: Clean up resources
 
-      this.logger.info('Vy MCP Server shutdown complete');
+      this.logger.info("Vy MCP Server shutdown complete");
     } catch (error) {
-      this.logger.error('Error during shutdown', error instanceof Error ? error : new Error(String(error)));
+      this.logger.error(
+        "Error during shutdown",
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
 
     process.exit(exitCode);
+  }
+
+  /**
+   * Create vector store configuration from server configuration
+   *
+   * This method translates our MCP server configuration into the format
+   * expected by the vector-store package, handling both local and hosted
+   * ChromaDB configurations.
+   */
+  private createVectorStoreConfig() {
+    const { vectorStore, embedding } = this.config;
+
+    // Determine if this is a hosted or local configuration
+    const isHosted = !!vectorStore.chromaApiKey;
+
+    if (isHosted) {
+      // Create hosted configuration
+      return createHostedConfig();
+    } else {
+      // Create local configuration with our specific settings
+      return createLocalConfig({
+        chroma: {
+          host: vectorStore.chromaHost,
+          port: vectorStore.chromaPort,
+        },
+        embedding: {
+          apiKey: embedding.openaiApiKey,
+          model: embedding.model as any, // Type assertion needed for model compatibility
+          dimensions: this.getEmbeddingDimensions(embedding.model),
+          maxTokens: 8192,
+          batchSize: 100,
+        },
+        collections: {
+          memories: vectorStore.collectionName,
+        },
+      });
+    }
+  }
+
+  /**
+   * Get embedding dimensions for the specified model
+   */
+  private getEmbeddingDimensions(model: string): number {
+    switch (model) {
+      case "text-embedding-3-small":
+      case "text-embedding-ada-002":
+        return 1536;
+      case "text-embedding-3-large":
+        return 3072;
+      default:
+        return 1536; // Default fallback
+    }
   }
 }
 
@@ -356,8 +460,8 @@ export async function checkServerHealth(): Promise<Record<string, unknown>> {
     return server.getHealth();
   } catch (error) {
     return {
-      status: 'unhealthy',
-      error: error instanceof Error ? error.message : String(error)
+      status: "unhealthy",
+      error: error instanceof Error ? error.message : String(error),
     };
   }
 }
