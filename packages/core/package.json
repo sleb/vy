@@ -2,6 +2,7 @@
   "name": "@repo/core",
   "version": "0.0.1",
   "description": "Core types package for Vy",
+  "license": "MIT",
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
