@@ -13,7 +13,7 @@
     "./cli": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/cli.ts --dts --format esm",
+    "build": "tsup src/index.ts src/cli.ts --dts --format esm && chmod +x dist/cli.js",
     "dev": "tsup src/index.ts src/cli.ts --dts --format esm --watch",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
