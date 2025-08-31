@@ -11,8 +11,8 @@ import chalk from "chalk";
 import { Command } from "commander";
 import { configCommands } from "./commands/config/index.js";
 import { devCommands } from "./commands/dev/index.js";
-import { memCommands } from "./commands/mem/index.js";
-import { serverCommands } from "./commands/server/index.js";
+import { memoryCommands } from "./commands/mem/index.js";
+import { health, logs, start, status, stop } from "./commands/server/index.js";
 
 const program = new Command();
 
@@ -41,7 +41,7 @@ mem
   .option("-m, --metadata <json>", "additional metadata as JSON string")
   .option("-s, --summary <text>", "optional summary of the content")
   .option("--from-file <path>", "read content from file")
-  .action(memCommands.capture);
+  .action(memoryCommands.capture);
 
 mem
   .command("search")
@@ -53,7 +53,7 @@ mem
   .option("--until <date>", "only show memories until date (YYYY-MM-DD)")
   .option("--min-score <score>", "minimum relevance score (0-1)", "0.1")
   .option("--json", "output results as JSON")
-  .action(memCommands.search);
+  .action(memoryCommands.search);
 
 mem
   .command("context")
@@ -64,7 +64,7 @@ mem
   .option("-n, --max-memories <number>", "maximum memories to return", "10")
   .option("-T, --max-tokens <number>", "token budget for context", "2000")
   .option("--json", "output as JSON")
-  .action(memCommands.context);
+  .action(memoryCommands.context);
 
 mem
   .command("list")
@@ -72,18 +72,18 @@ mem
   .description("📋 List stored memories")
   .option("-l, --limit <number>", "number of memories to show", "20")
   .option("-t, --type <type>", "filter by memory type")
-  .option("--since <date>", "memories since date (YYYY-MM-DD)")
-  .option("--sort <field>", "sort by field (date, relevance)", "date")
-  .option("--json", "output as JSON")
-  .action(memCommands.list);
+  .option("--sort <field>", "sort by field (date|relevance)", "date")
+  .option("-v, --verbose", "show detailed output")
+  .action(memoryCommands.list);
 
 mem
   .command("delete")
   .alias("rm")
-  .description("🗑️  Delete memories")
+  .description("🗑️  Delete a memory")
   .argument("<id>", "memory ID to delete")
-  .option("-f, --force", "skip confirmation prompt")
-  .action(memCommands.delete);
+  .option("--force", "skip confirmation prompt")
+  .option("-v, --verbose", "show detailed output")
+  .action(memoryCommands.delete);
 
 // Server management
 const server = program
@@ -93,28 +93,28 @@ const server = program
 server
   .command("start")
   .description("🚀 Start the MCP server")
-  .option("-d, --daemon", "run as daemon")
-  .option("-p, --port <port>", "server port (for debugging)")
-  .option("--log-level <level>", "log level (debug, info, warn, error)", "info")
-  .action(serverCommands.start);
+  .option("-d, --daemon", "run in background as daemon")
+  .option("--log-level <level>", "set log level (debug, info, warn, error)")
+  .action(start);
 
 server
   .command("stop")
   .description("🛑 Stop the MCP server")
-  .action(serverCommands.stop);
+  .option("-f, --force", "force stop if graceful shutdown fails")
+  .action(stop);
 
 server
   .command("status")
   .description("📊 Check server status")
-  .option("--json", "output as JSON")
-  .action(serverCommands.status);
+  .option("-v, --verbose", "show detailed output")
+  .action(status);
 
 server
   .command("health")
   .description("🏥 Perform health check")
   .option("--timeout <ms>", "health check timeout", "5000")
   .option("--json", "output as JSON")
-  .action(serverCommands.health);
+  .action(health);
 
 server
   .command("logs")
@@ -122,7 +122,7 @@ server
   .option("-f, --follow", "follow log output")
   .option("-n, --lines <number>", "number of lines to show", "50")
   .option("--since <time>", "show logs since timestamp")
-  .action(serverCommands.logs);
+  .action(logs);
 
 // Configuration management
 const config = program

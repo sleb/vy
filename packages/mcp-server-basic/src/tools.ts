@@ -84,7 +84,11 @@ export class VyToolHandlers implements McpToolHandler {
 
       return result;
     } catch (error) {
-      return this.handleToolError(context, error, args);
+      return this.handleToolError(
+        context,
+        error,
+        args,
+      ) as CaptureConversationResult;
     }
   }
 
@@ -140,7 +144,7 @@ export class VyToolHandlers implements McpToolHandler {
 
       return result;
     } catch (error) {
-      return this.handleToolError(context, error, args);
+      return this.handleToolError(context, error, args) as SearchMemoryResult;
     }
   }
 
@@ -193,7 +197,7 @@ export class VyToolHandlers implements McpToolHandler {
 
       return result;
     } catch (error) {
-      return this.handleToolError(context, error, args);
+      return this.handleToolError(context, error, args) as GetContextResult;
     }
   }
 

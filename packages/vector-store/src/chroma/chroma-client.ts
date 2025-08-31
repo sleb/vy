@@ -12,70 +12,6 @@ import type {
 } from "../config.js";
 
 /**
- * ChromaDB client interface (from chromadb package)
- */
-interface ChromaDbClient {
-  heartbeat(): Promise<number>;
-  createCollection(params: {
-    name: string;
-    metadata?: Record<string, unknown>;
-  }): Promise<ChromaDbCollection>;
-  getOrCreateCollection(params: {
-    name: string;
-    metadata?: Record<string, unknown>;
-  }): Promise<ChromaDbCollection>;
-  deleteCollection(params: { name: string }): Promise<void>;
-  listCollections(): Promise<ChromaDbCollection[]>;
-  getCollection(params: { name: string }): Promise<ChromaDbCollection>;
-}
-
-/**
- * ChromaDB collection interface (from chromadb package)
- */
-interface ChromaDbCollection {
-  name: string;
-  id: string;
-  metadata?: Record<string, unknown>;
-  add(params: {
-    ids: string[];
-    embeddings: number[][];
-    metadatas: Record<string, unknown>[];
-    documents: string[];
-  }): Promise<void>;
-  update(params: {
-    ids: string[];
-    embeddings: number[][];
-    metadatas: Record<string, unknown>[];
-    documents: string[];
-  }): Promise<void>;
-  delete(params: { ids: string[] }): Promise<void>;
-  get(params: { ids: string[] }): Promise<{
-    ids: string[];
-    embeddings?: number[][];
-    metadatas?: (Record<string, unknown> | null)[];
-    documents?: (string | null)[];
-  }>;
-  query(params: {
-    queryEmbeddings: number[][];
-    nResults: number;
-    where?: Record<string, unknown>;
-    include?: string[];
-  }): Promise<ChromaQueryResult>;
-  count(): Promise<number>;
-}
-
-/**
- * ChromaDB client options
- */
-interface ChromaDbClientOptions {
-  path: string;
-  auth?: {
-    provider: string;
-    credentials: string;
-  };
-}
-
-/**
  * ChromaDB collection interface
  */
 export interface ChromaCollection {
@@ -109,7 +45,7 @@ export interface ChromaQueryResult {
  */
 export class ChromaClient {
   private readonly config: ChromaConfig;
-  private client: ChromaDbClient | null = null;
+  private client: any = null;
   private connected = false;
 
   constructor(config: ChromaConfig) {
@@ -131,9 +67,9 @@ export class ChromaClient {
       // Determine if this is hosted or local config
       const isHosted = "apiKey" in this.config && "ssl" in this.config;
 
-      const clientOptions: ChromaDbClientOptions = {
+      const clientOptions = {
         path: `${isHosted ? "https" : "http"}://${this.config.host}:${this.config.port}`,
-      };
+      } as any;
 
       if (isHosted && "apiKey" in this.config) {
         clientOptions.auth = {
@@ -145,7 +81,7 @@ export class ChromaClient {
       this.client = new ChromaClient(clientOptions);
 
       // Test connection
-      await this.client.heartbeat();
+      await this.getClient().heartbeat();
 
       this.connected = true;
     } catch (error) {
@@ -176,10 +112,8 @@ export class ChromaClient {
     name: string,
     metadata?: Record<string, unknown>,
   ): Promise<ChromaCollection> {
-    this.ensureConnected();
-
     try {
-      const collection = await this.client.createCollection({
+      const collection = await this.getClient().createCollection({
         name,
         metadata: metadata || {},
       });
@@ -201,10 +135,8 @@ export class ChromaClient {
     name: string,
     metadata?: Record<string, unknown>,
   ): Promise<ChromaCollection> {
-    this.ensureConnected();
-
     try {
-      const collection = await this.client.getOrCreateCollection({
+      const collection = await this.getClient().getOrCreateCollection({
         name,
         metadata: metadata || {},
       });
@@ -223,10 +155,8 @@ export class ChromaClient {
    * Delete a collection
    */
   async deleteCollection(name: string): Promise<void> {
-    this.ensureConnected();
-
     try {
-      await this.client.deleteCollection({ name });
+      await this.getClient().deleteCollection({ name });
     } catch (error) {
       throw new Error(`Failed to delete collection '${name}': ${error}`);
     }
@@ -236,11 +166,9 @@ export class ChromaClient {
    * List all collections
    */
   async listCollections(): Promise<ChromaCollection[]> {
-    this.ensureConnected();
-
     try {
-      const collections = await this.client.listCollections();
-      return collections.map((col) => ({
+      const collections = await this.getClient().listCollections();
+      return collections.map((col: any) => ({
         name: col.name,
         id: col.id,
         metadata: col.metadata,
@@ -257,21 +185,19 @@ export class ChromaClient {
     collectionName: string,
     documents: ChromaDocument[],
   ): Promise<void> {
-    this.ensureConnected();
-
     if (documents.length === 0) {
       return;
     }
 
     try {
-      const collection = await this.client.getCollection({
+      const collection = await this.getClient().getCollection({
         name: collectionName,
       });
 
       await collection.add({
         ids: documents.map((doc) => doc.id),
         embeddings: documents.map((doc) => doc.embedding),
-        metadatas: documents.map((doc) => doc.metadata),
+        metadatas: documents.map((doc) => doc.metadata as any),
         documents: documents.map((doc) => doc.document),
       });
     } catch (error) {
@@ -288,21 +214,19 @@ export class ChromaClient {
     collectionName: string,
     documents: ChromaDocument[],
   ): Promise<void> {
-    this.ensureConnected();
-
     if (documents.length === 0) {
       return;
     }
 
     try {
-      const collection = await this.client.getCollection({
+      const collection = await this.getClient().getCollection({
         name: collectionName,
       });
 
       await collection.update({
         ids: documents.map((doc) => doc.id),
         embeddings: documents.map((doc) => doc.embedding),
-        metadatas: documents.map((doc) => doc.metadata),
+        metadatas: documents.map((doc) => doc.metadata as any),
         documents: documents.map((doc) => doc.document),
       });
     } catch (error) {
@@ -316,14 +240,12 @@ export class ChromaClient {
    * Delete documents from a collection
    */
   async deleteDocuments(collectionName: string, ids: string[]): Promise<void> {
-    this.ensureConnected();
-
     if (ids.length === 0) {
       return;
     }
 
     try {
-      const collection = await this.client.getCollection({
+      const collection = await this.getClient().getCollection({
         name: collectionName,
       });
       await collection.delete({ ids });
@@ -341,14 +263,12 @@ export class ChromaClient {
     collectionName: string,
     ids: string[],
   ): Promise<ChromaDocument[]> {
-    this.ensureConnected();
-
     if (ids.length === 0) {
       return [];
     }
 
     try {
-      const collection = await this.client.getCollection({
+      const collection = await this.getClient().getCollection({
         name: collectionName,
       });
       const result = await collection.get({ ids });
@@ -356,7 +276,7 @@ export class ChromaClient {
       const documents: ChromaDocument[] = [];
       for (let i = 0; i < result.ids.length; i++) {
         documents.push({
-          id: result.ids[i],
+          id: result.ids[i] || "",
           embedding: result.embeddings?.[i] || [],
           metadata: result.metadatas?.[i] || {},
           document: result.documents?.[i] || "",
@@ -380,10 +300,8 @@ export class ChromaClient {
     nResults: number = 10,
     where?: Record<string, unknown>,
   ): Promise<ChromaQueryResult> {
-    this.ensureConnected();
-
     try {
-      const collection = await this.client.getCollection({
+      const collection = await this.getClient().getCollection({
         name: collectionName,
       });
 
@@ -406,10 +324,8 @@ export class ChromaClient {
    * Get collection count
    */
   async getCollectionCount(collectionName: string): Promise<number> {
-    this.ensureConnected();
-
     try {
-      const collection = await this.client.getCollection({
+      const collection = await this.getClient().getCollection({
         name: collectionName,
       });
       return await collection.count();
@@ -429,7 +345,7 @@ export class ChromaClient {
     }
 
     try {
-      await this.client.heartbeat();
+      await this.getClient().heartbeat();
       return true;
     } catch {
       return false;
@@ -445,6 +361,17 @@ export class ChromaClient {
         "ChromaDB client is not connected. Call connect() first.",
       );
     }
+  }
+
+  /**
+   * Get connected client (with null check)
+   */
+  private getClient(): any {
+    this.ensureConnected();
+    if (!this.client) {
+      throw new Error("Client is not initialized");
+    }
+    return this.client;
   }
 }
 

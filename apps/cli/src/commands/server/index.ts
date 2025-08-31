@@ -36,7 +36,7 @@ const SERVER_LOG_FILE = join(homedir(), ".vy", "server.log");
 /**
  * Start the MCP server
  */
-export async function start(options?: Record<string, unknown>): Promise<void> {
+async function start(options?: Record<string, unknown>): Promise<void> {
   const spinner = ora("Starting Vy MCP server...").start();
 
   try {
@@ -131,7 +131,7 @@ export async function start(options?: Record<string, unknown>): Promise<void> {
 /**
  * Stop the MCP server
  */
-export async function stop(options?: Record<string, unknown>): Promise<void> {
+async function stop(options?: Record<string, unknown>): Promise<void> {
   const spinner = ora("Stopping Vy MCP server...").start();
 
   try {
