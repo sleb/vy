@@ -8,6 +8,16 @@
 import type { ChromaMemoryStore } from "@repo/vector-store";
 
 /**
+ * Structured logger interface
+ */
+import type { Logger } from "pino";
+
+/**
+ * Re-export Logger type for external use
+ */
+export type { Logger };
+
+/**
  * Server configuration derived from environment variables
  */
 export interface ServerConfig {
@@ -62,16 +72,6 @@ export interface MemoryServiceDeps {
   store: ChromaMemoryStore;
   config: ServerConfig;
   logger: Logger;
-}
-
-/**
- * Structured logger interface
- */
-export interface Logger {
-  debug(message: string, meta?: Record<string, unknown>): void;
-  info(message: string, meta?: Record<string, unknown>): void;
-  warn(message: string, meta?: Record<string, unknown>): void;
-  error(message: string, error?: Error, meta?: Record<string, unknown>): void;
 }
 
 /**

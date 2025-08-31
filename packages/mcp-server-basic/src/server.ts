@@ -71,9 +71,12 @@ export class VyMcpServer {
       },
     );
 
-    this.logger.info("Vy MCP Server created", {
-      config: getConfigSummary(this.config),
-    });
+    this.logger.info(
+      {
+        config: getConfigSummary(this.config),
+      },
+      "Vy MCP Server created",
+    );
   }
 
   /**
@@ -131,15 +134,21 @@ export class VyMcpServer {
       this.logger.debug("Setting up error handlers...");
       this.setupErrorHandlers();
 
-      this.logger.info("Vy MCP Server initialization complete", {
-        hasMemoryStore: !!this.memoryStore,
-        hasMemoryService: !!this.memoryService,
-        hasToolHandlers: !!this.toolHandlers,
-      });
+      this.logger.info(
+        {
+          hasMemoryStore: !!this.memoryStore,
+          hasMemoryService: !!this.memoryService,
+          hasToolHandlers: !!this.toolHandlers,
+        },
+        "Vy MCP Server initialization complete",
+      );
     } catch (error) {
       this.state.lastError =
         error instanceof Error ? error : new Error(String(error));
-      this.logger.error("Failed to initialize server", this.state.lastError);
+      this.logger.error(
+        { err: this.state.lastError },
+        "Failed to initialize server",
+      );
       throw error;
     }
   }
@@ -164,14 +173,20 @@ export class VyMcpServer {
 
       this.state.isRunning = true;
       this.state.startTime = new Date();
-      this.logger.info("Vy MCP Server is running", {
-        startTime: this.state.startTime,
-        running: this.state.isRunning,
-      });
+      this.logger.info(
+        {
+          startTime: this.state.startTime,
+          running: this.state.isRunning,
+        },
+        "Vy MCP Server is running",
+      );
     } catch (error) {
       this.state.lastError =
         error instanceof Error ? error : new Error(String(error));
-      this.logger.error("Failed to connect to transport", this.state.lastError);
+      this.logger.error(
+        { err: this.state.lastError },
+        "Failed to connect to transport",
+      );
       throw error;
     }
   }
@@ -193,28 +208,34 @@ export class VyMcpServer {
         async (request, extra) => {
           const toolName = request.params.name;
           const toolArgs = request.params.arguments;
-          this.logger.debug("Received tool call", { toolName, toolArgs });
+          this.logger.debug({ toolName, toolArgs }, "Received tool call");
 
           const result = await this.handleToolCall(toolName, toolArgs);
           return { content: [{ type: "text", text: JSON.stringify(result) }] };
         },
       );
 
-      this.logger.debug("MCP tools registered successfully", {
-        toolCount: 3,
-        tools: ["capture_conversation", "search_memory", "get_context"],
-      });
+      this.logger.debug(
+        {
+          toolCount: 3,
+          tools: ["capture_conversation", "search_memory", "get_context"],
+        },
+        "MCP tools registered successfully",
+      );
     } catch (error) {
       this.logger.error(
+        { err: error instanceof Error ? error : new Error(String(error)) },
         "Failed to register tools",
-        error instanceof Error ? error : new Error(String(error)),
       );
       throw error;
     }
 
-    this.logger.info("MCP tools registered", {
-      tools: ["capture_conversation", "search_memory", "get_context"],
-    });
+    this.logger.info(
+      {
+        tools: ["capture_conversation", "search_memory", "get_context"],
+      },
+      "MCP tools registered",
+    );
   }
 
   /**
@@ -233,10 +254,13 @@ export class VyMcpServer {
     const startTime = Date.now();
     this.state.toolCallCount++;
 
-    this.logger.info("Handling tool call", {
-      toolName,
-      callNumber: this.state.toolCallCount,
-    });
+    this.logger.info(
+      {
+        toolName,
+        callNumber: this.state.toolCallCount,
+      },
+      "Handling tool call",
+    );
 
     try {
       if (!this.toolHandlers) {
@@ -258,23 +282,26 @@ export class VyMcpServer {
           throw new Error(`Unknown tool: ${toolName}`);
       }
       const duration = Date.now() - startTime;
-      this.logger.info("Tool call completed successfully", {
-        toolName,
-        duration,
-        callNumber: this.state.toolCallCount,
-      });
-
-      return result;
-    } catch (error) {
-      const duration = Date.now() - startTime;
-      this.logger.error(
-        `Tool call failed: ${toolName}`,
-        error instanceof Error ? error : new Error(String(error)),
+      this.logger.info(
         {
           toolName,
           duration,
           callNumber: this.state.toolCallCount,
         },
+        "Tool call completed successfully",
+      );
+
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.logger.error(
+        {
+          err: error instanceof Error ? error : new Error(String(error)),
+          toolName,
+          duration,
+          callNumber: this.state.toolCallCount,
+        },
+        `Tool call failed: ${toolName}`,
       );
 
       throw error;
@@ -287,23 +314,23 @@ export class VyMcpServer {
   private setupErrorHandlers(): void {
     this.server.onerror = (error) => {
       this.state.lastError = error;
-      this.logger.error("MCP Server error", error);
+      this.logger.error({ err: error }, "MCP Server error");
     };
 
     // Handle uncaught exceptions
     process.on("uncaughtException", (error) => {
-      this.logger.error("Uncaught exception", error);
+      this.logger.error({ err: error }, "Uncaught exception");
       this.shutdown(1);
     });
 
     // Handle unhandled promise rejections
     process.on("unhandledRejection", (reason, promise) => {
       this.logger.error(
-        "Unhandled promise rejection",
-        new Error(String(reason)),
         {
+          err: new Error(String(reason)),
           promise: String(promise),
         },
+        "Unhandled promise rejection",
       );
       this.shutdown(1);
     });
@@ -347,11 +374,14 @@ export class VyMcpServer {
    * Gracefully shutdown the server
    */
   async shutdown(exitCode: number = 0): Promise<void> {
-    this.logger.info("Shutting down Vy MCP Server...", {
-      exitCode,
-      uptime: Date.now() - this.state.startTime.getTime(),
-      toolCalls: this.state.toolCallCount,
-    });
+    this.logger.info(
+      {
+        exitCode,
+        uptime: Date.now() - this.state.startTime.getTime(),
+        toolCalls: this.state.toolCallCount,
+      },
+      "Shutting down Vy MCP Server...",
+    );
 
     this.state.isRunning = false;
 
@@ -363,8 +393,8 @@ export class VyMcpServer {
       this.logger.info("Vy MCP Server shutdown complete");
     } catch (error) {
       this.logger.error(
+        { err: error instanceof Error ? error : new Error(String(error)) },
         "Error during shutdown",
-        error instanceof Error ? error : new Error(String(error)),
       );
     }
 

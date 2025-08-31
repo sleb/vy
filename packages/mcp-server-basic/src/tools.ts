@@ -10,16 +10,16 @@
  */
 
 import type {
-    CaptureConversationArgs,
-    CaptureConversationResult,
-    GetContextArgs,
-    GetContextResult,
-    McpToolHandler,
-    SearchMemoryArgs,
-    SearchMemoryResult
-} from '@repo/core';
-import type { MemoryService } from './memory-service.js';
-import type { Logger, ToolContext } from './types.js';
+  CaptureConversationArgs,
+  CaptureConversationResult,
+  GetContextArgs,
+  GetContextResult,
+  McpToolHandler,
+  SearchMemoryArgs,
+  SearchMemoryResult,
+} from "@repo/core";
+import type { MemoryService } from "./memory-service.js";
+import type { Logger, ToolContext } from "./types.js";
 
 /**
  * MCP Tool Handlers implementation
@@ -52,14 +52,19 @@ export class VyToolHandlers implements McpToolHandler {
    * - Error handling in tool handlers
    * - Structured logging for observability
    */
-  async captureConversation(args: CaptureConversationArgs): Promise<CaptureConversationResult> {
-    const context = this.createToolContext('capture_conversation');
-    context.logger.info('Processing capture_conversation request', {
-      conversationLength: args.conversation?.length,
-      hasParticipants: !!args.participants?.length,
-      hasMetadata: !!args.metadata,
-      hasTags: !!args.tags?.length
-    });
+  async captureConversation(
+    args: CaptureConversationArgs,
+  ): Promise<CaptureConversationResult> {
+    const context = this.createToolContext("capture_conversation");
+    context.logger.info(
+      {
+        conversationLength: args.conversation?.length,
+        hasParticipants: !!args.participants?.length,
+        hasMetadata: !!args.metadata,
+        hasTags: !!args.tags?.length,
+      },
+      "Processing capture_conversation request",
+    );
 
     try {
       // TODO: Validate MCP arguments
@@ -69,10 +74,13 @@ export class VyToolHandlers implements McpToolHandler {
       const result = await this.memoryService.captureConversation(args);
 
       // TODO: Log success and return result
-      context.logger.info('Successfully captured conversation', {
-        memoryId: result.memoryId,
-        duration: Date.now() - context.startTime.getTime()
-      });
+      context.logger.info(
+        {
+          memoryId: result.memoryId,
+          duration: Date.now() - context.startTime.getTime(),
+        },
+        "Successfully captured conversation",
+      );
 
       return result;
     } catch (error) {
@@ -98,14 +106,19 @@ export class VyToolHandlers implements McpToolHandler {
    * - User experience optimization
    */
   async searchMemory(args: SearchMemoryArgs): Promise<SearchMemoryResult> {
-    const context = this.createToolContext('search_memory');
-    context.logger.info('Processing search_memory request', {
-      query: args.query?.substring(0, 100) + (args.query && args.query.length > 100 ? '...' : ''),
-      limit: args.limit,
-      types: args.types,
-      hasTimeRange: !!args.timeRange,
-      minRelevanceScore: args.minRelevanceScore
-    });
+    const context = this.createToolContext("search_memory");
+    context.logger.info(
+      {
+        query:
+          args.query?.substring(0, 100) +
+          (args.query && args.query.length > 100 ? "..." : ""),
+        limit: args.limit,
+        types: args.types,
+        hasTimeRange: !!args.timeRange,
+        minRelevanceScore: args.minRelevanceScore,
+      },
+      "Processing search_memory request",
+    );
 
     try {
       // TODO: Validate search arguments
@@ -115,12 +128,15 @@ export class VyToolHandlers implements McpToolHandler {
       const result = await this.memoryService.searchMemory(args);
 
       // TODO: Log success and return result
-      context.logger.info('Successfully searched memory', {
-        resultCount: result.results?.length || 0,
-        totalCount: result.totalCount,
-        searchTime: result.searchTime,
-        duration: Date.now() - context.startTime.getTime()
-      });
+      context.logger.info(
+        {
+          resultCount: result.results?.length || 0,
+          totalCount: result.totalCount,
+          searchTime: result.searchTime,
+          duration: Date.now() - context.startTime.getTime(),
+        },
+        "Successfully searched memory",
+      );
 
       return result;
     } catch (error) {
@@ -146,13 +162,16 @@ export class VyToolHandlers implements McpToolHandler {
    * - Selection reasoning and explainability
    */
   async getContext(args: GetContextArgs): Promise<GetContextResult> {
-    const context = this.createToolContext('get_context');
-    context.logger.info('Processing get_context request', {
-      hasCurrentQuery: !!args.currentQuery,
-      recentMessageCount: args.recentMessages?.length || 0,
-      maxMemories: args.maxMemories,
-      maxTokens: args.maxTokens
-    });
+    const context = this.createToolContext("get_context");
+    context.logger.info(
+      {
+        hasCurrentQuery: !!args.currentQuery,
+        recentMessageCount: args.recentMessages?.length || 0,
+        maxMemories: args.maxMemories,
+        maxTokens: args.maxTokens,
+      },
+      "Processing get_context request",
+    );
 
     try {
       // TODO: Validate context arguments
@@ -162,12 +181,15 @@ export class VyToolHandlers implements McpToolHandler {
       const result = await this.memoryService.getContext(args);
 
       // TODO: Log success and return result
-      context.logger.info('Successfully retrieved context', {
-        memoryCount: result.memories?.length || 0,
-        estimatedTokens: result.estimatedTokens,
-        selectionReason: result.selectionReason,
-        duration: Date.now() - context.startTime.getTime()
-      });
+      context.logger.info(
+        {
+          memoryCount: result.memories?.length || 0,
+          estimatedTokens: result.estimatedTokens,
+          selectionReason: result.selectionReason || "none provided",
+          duration: Date.now() - context.startTime.getTime(),
+        },
+        "Successfully retrieved context",
+      );
 
       return result;
     } catch (error) {
@@ -184,7 +206,7 @@ export class VyToolHandlers implements McpToolHandler {
     return {
       toolName,
       startTime: new Date(),
-      logger: this.logger
+      logger: this.logger,
     };
   }
 
@@ -192,28 +214,33 @@ export class VyToolHandlers implements McpToolHandler {
    * Validate capture_conversation arguments
    */
   private validateCaptureConversationArgs(args: CaptureConversationArgs): void {
-    if (!args || typeof args !== 'object') {
-      throw new Error('Invalid arguments: expected object');
+    if (!args || typeof args !== "object") {
+      throw new Error("Invalid arguments: expected object");
     }
 
-    if (!args.conversation || typeof args.conversation !== 'string') {
-      throw new Error('conversation is required and must be a non-empty string');
+    if (!args.conversation || typeof args.conversation !== "string") {
+      throw new Error(
+        "conversation is required and must be a non-empty string",
+      );
     }
 
-    if (args.conversation.trim() === '') {
-      throw new Error('conversation cannot be empty or only whitespace');
+    if (args.conversation.trim() === "") {
+      throw new Error("conversation cannot be empty or only whitespace");
     }
 
     if (args.participants && !Array.isArray(args.participants)) {
-      throw new Error('participants must be an array of strings');
+      throw new Error("participants must be an array of strings");
     }
 
     if (args.tags && !Array.isArray(args.tags)) {
-      throw new Error('tags must be an array of strings');
+      throw new Error("tags must be an array of strings");
     }
 
-    if (args.metadata && (typeof args.metadata !== 'object' || Array.isArray(args.metadata))) {
-      throw new Error('metadata must be an object');
+    if (
+      args.metadata &&
+      (typeof args.metadata !== "object" || Array.isArray(args.metadata))
+    ) {
+      throw new Error("metadata must be an object");
     }
 
     // TODO: Add more specific validation rules
@@ -223,25 +250,32 @@ export class VyToolHandlers implements McpToolHandler {
    * Validate search_memory arguments
    */
   private validateSearchMemoryArgs(args: SearchMemoryArgs): void {
-    if (!args || typeof args !== 'object') {
-      throw new Error('Invalid arguments: expected object');
+    if (!args || typeof args !== "object") {
+      throw new Error("Invalid arguments: expected object");
     }
 
-    if (!args.query || typeof args.query !== 'string') {
-      throw new Error('query is required and must be a non-empty string');
+    if (!args.query || typeof args.query !== "string") {
+      throw new Error("query is required and must be a non-empty string");
     }
 
-    if (args.query.trim() === '') {
-      throw new Error('query cannot be empty or only whitespace');
+    if (args.query.trim() === "") {
+      throw new Error("query cannot be empty or only whitespace");
     }
 
-    if (args.limit !== undefined && (typeof args.limit !== 'number' || args.limit < 1 || args.limit > 100)) {
-      throw new Error('limit must be a number between 1 and 100');
+    if (
+      args.limit !== undefined &&
+      (typeof args.limit !== "number" || args.limit < 1 || args.limit > 100)
+    ) {
+      throw new Error("limit must be a number between 1 and 100");
     }
 
-    if (args.minRelevanceScore !== undefined &&
-        (typeof args.minRelevanceScore !== 'number' || args.minRelevanceScore < 0 || args.minRelevanceScore > 1)) {
-      throw new Error('minRelevanceScore must be a number between 0 and 1');
+    if (
+      args.minRelevanceScore !== undefined &&
+      (typeof args.minRelevanceScore !== "number" ||
+        args.minRelevanceScore < 0 ||
+        args.minRelevanceScore > 1)
+    ) {
+      throw new Error("minRelevanceScore must be a number between 0 and 1");
     }
 
     // TODO: Validate timeRange format
@@ -252,22 +286,30 @@ export class VyToolHandlers implements McpToolHandler {
    * Validate get_context arguments
    */
   private validateGetContextArgs(args: GetContextArgs): void {
-    if (!args || typeof args !== 'object') {
-      throw new Error('Invalid arguments: expected object');
+    if (!args || typeof args !== "object") {
+      throw new Error("Invalid arguments: expected object");
     }
 
-    if (args.maxMemories !== undefined &&
-        (typeof args.maxMemories !== 'number' || args.maxMemories < 1 || args.maxMemories > 50)) {
-      throw new Error('maxMemories must be a number between 1 and 50');
+    if (
+      args.maxMemories !== undefined &&
+      (typeof args.maxMemories !== "number" ||
+        args.maxMemories < 1 ||
+        args.maxMemories > 50)
+    ) {
+      throw new Error("maxMemories must be a number between 1 and 50");
     }
 
-    if (args.maxTokens !== undefined &&
-        (typeof args.maxTokens !== 'number' || args.maxTokens < 100 || args.maxTokens > 50000)) {
-      throw new Error('maxTokens must be a number between 100 and 50,000');
+    if (
+      args.maxTokens !== undefined &&
+      (typeof args.maxTokens !== "number" ||
+        args.maxTokens < 100 ||
+        args.maxTokens > 50000)
+    ) {
+      throw new Error("maxTokens must be a number between 100 and 50,000");
     }
 
     if (args.recentMessages && !Array.isArray(args.recentMessages)) {
-      throw new Error('recentMessages must be an array of strings');
+      throw new Error("recentMessages must be an array of strings");
     }
 
     // TODO: Add more validation as needed
@@ -276,41 +318,50 @@ export class VyToolHandlers implements McpToolHandler {
   /**
    * Handle tool execution errors and format for MCP response
    */
-  private handleToolError(context: ToolContext, error: unknown, args: unknown): any {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+  private handleToolError(
+    context: ToolContext,
+    error: unknown,
+    args: unknown,
+  ): any {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
     const duration = Date.now() - context.startTime.getTime();
 
-    context.logger.error(`Tool ${context.toolName} failed`, error instanceof Error ? error : new Error(String(error)), {
-      args,
-      duration
-    });
+    context.logger.error(
+      {
+        err: error instanceof Error ? error : new Error(String(error)),
+        args,
+        duration,
+      },
+      `Tool ${context.toolName} failed`,
+    );
 
     // Return structured error response based on tool type
-    if (context.toolName === 'capture_conversation') {
+    if (context.toolName === "capture_conversation") {
       return {
         success: false,
-        memoryId: '',
+        memoryId: "",
         message: `Failed to capture conversation: ${errorMessage}`,
         extractedInsights: [],
-        actionItems: []
+        actionItems: [],
       } as CaptureConversationResult;
     }
 
-    if (context.toolName === 'search_memory') {
+    if (context.toolName === "search_memory") {
       return {
         success: false,
         results: [],
         totalCount: 0,
-        searchTime: duration
+        searchTime: duration,
       } as SearchMemoryResult;
     }
 
-    if (context.toolName === 'get_context') {
+    if (context.toolName === "get_context") {
       return {
         success: false,
         memories: [],
         estimatedTokens: 0,
-        selectionReason: `Error: ${errorMessage}`
+        selectionReason: `Error: ${errorMessage}`,
       } as GetContextResult;
     }
 
@@ -324,7 +375,7 @@ export class VyToolHandlers implements McpToolHandler {
  */
 export function createToolHandlers(
   memoryService: MemoryService,
-  logger: Logger
+  logger: Logger,
 ): VyToolHandlers {
   return new VyToolHandlers(memoryService, logger);
 }

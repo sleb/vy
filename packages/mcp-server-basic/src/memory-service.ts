@@ -58,12 +58,15 @@ export class MemoryService {
   async captureConversation(
     args: CaptureConversationArgs,
   ): Promise<CaptureConversationResult> {
-    this.logger.info("Capturing conversation", {
-      conversationLength: args.conversation.length,
-      hasParticipants: !!args.participants?.length,
-      hasMetadata: !!args.metadata,
-      hasTags: !!args.tags?.length,
-    });
+    this.logger.info(
+      {
+        conversationLength: args.conversation.length,
+        hasParticipants: !!args.participants?.length,
+        hasMetadata: !!args.metadata,
+        hasTags: !!args.tags?.length,
+      },
+      "Capturing conversation",
+    );
 
     try {
       // TODO: Implement validation logic
@@ -74,8 +77,8 @@ export class MemoryService {
       throw new Error("Not implemented yet - we'll do this together!");
     } catch (error) {
       this.logger.error(
+        { err: error instanceof Error ? error : new Error(String(error)) },
         "Failed to capture conversation",
-        error instanceof Error ? error : new Error(String(error)),
       );
       throw new ToolExecutionError(
         "capture_conversation",
@@ -103,14 +106,17 @@ export class MemoryService {
    * - User experience optimization
    */
   async searchMemory(args: SearchMemoryArgs): Promise<SearchMemoryResult> {
-    this.logger.info("Searching memory", {
-      query:
-        args.query.substring(0, 100) + (args.query.length > 100 ? "..." : ""),
-      limit: args.limit,
-      types: args.types,
-      timeRange: args.timeRange,
-      minRelevanceScore: args.minRelevanceScore,
-    });
+    this.logger.info(
+      {
+        query:
+          args.query.substring(0, 100) + (args.query.length > 100 ? "..." : ""),
+        limit: args.limit,
+        types: args.types,
+        timeRange: args.timeRange,
+        minRelevanceScore: args.minRelevanceScore,
+      },
+      "Searching memory",
+    );
 
     const startTime = Date.now();
 
@@ -125,8 +131,8 @@ export class MemoryService {
       throw new Error("Not implemented yet - we'll do this together!");
     } catch (error) {
       this.logger.error(
+        { err: error instanceof Error ? error : new Error(String(error)) },
         "Failed to search memory",
-        error instanceof Error ? error : new Error(String(error)),
       );
       throw new ToolExecutionError(
         "search_memory",
@@ -153,12 +159,15 @@ export class MemoryService {
    * - Memory selection heuristics
    */
   async getContext(args: GetContextArgs): Promise<GetContextResult> {
-    this.logger.info("Getting context", {
-      hasCurrentQuery: !!args.currentQuery,
-      recentMessageCount: args.recentMessages?.length || 0,
-      maxMemories: args.maxMemories,
-      maxTokens: args.maxTokens,
-    });
+    this.logger.info(
+      {
+        hasCurrentQuery: !!args.currentQuery,
+        recentMessageCount: args.recentMessages?.length || 0,
+        maxMemories: args.maxMemories,
+        maxTokens: args.maxTokens,
+      },
+      "Getting context",
+    );
 
     try {
       // TODO: Implement context retrieval logic
@@ -172,8 +181,8 @@ export class MemoryService {
       throw new Error("Not implemented yet - we'll do this together!");
     } catch (error) {
       this.logger.error(
+        { err: error instanceof Error ? error : new Error(String(error)) },
         "Failed to get context",
-        error instanceof Error ? error : new Error(String(error)),
       );
       throw new ToolExecutionError(
         "get_context",
