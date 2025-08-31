@@ -258,6 +258,39 @@ node apps/cli/dist/cli.js dev debug --chromadb
 - 🛡️ Robust error handling with verbose mode
 - 💾 Memory operations with metadata support
 
+## 🚀 CI/CD Pipeline
+
+This project uses GitHub Actions for automated testing and building on every commit and pull request.
+
+### Workflow Overview
+
+The CI pipeline runs these jobs in parallel for fast feedback:
+
+- **Lint**: Code formatting and ESLint checks via `turbo run lint`
+- **Type Check**: TypeScript validation via `turbo run check-types`
+- **Test**: Automated test suites via `turbo run test`
+- **Build**: Compilation of all apps and packages via `turbo run build`
+
+### Adding Tests
+
+When you add test scripts to any workspace package, they'll automatically be discovered and run by the CI pipeline. No workflow changes needed!
+
+```json
+{
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest --testPathPattern=unit"
+  }
+}
+```
+
+### Performance Features
+
+- **Multi-layer caching**: Both npm packages and Turbo build cache
+- **Parallel execution**: Quality checks run simultaneously
+- **Fail-fast**: Build only runs if code quality passes
+- **Node.js 20.x LTS** for consistent environments
+
 ## 🧠 Core Concepts & Design Decisions
 
 ### Two-Layer Memory Architecture
