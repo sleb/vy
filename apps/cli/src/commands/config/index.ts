@@ -15,6 +15,7 @@ import {
   parseConfigValue,
   validateConfig,
   validateField,
+  type ConfigFieldMeta,
   type VyConfig,
 } from "@repo/core";
 import chalk from "chalk";
@@ -115,10 +116,7 @@ export const configCommands = {
         ];
 
         for (const field of section.fields) {
-          const value = getNestedValue(
-            config as Record<string, unknown>,
-            field.path,
-          );
+          const value = getNestedValue(config, field.path);
           const source = getNestedValue(sources, field.path);
 
           let displayValue: string;
@@ -307,118 +305,179 @@ export const configCommands = {
 async function runInteractiveSetup(): Promise<Partial<VyConfig>> {
   const config: Record<string, unknown> = {};
 
+  // Define default values for prompts
+  const promptDefaults: Record<string, unknown> = {
+    embedding: {
+      openaiApiKey: "",
+      model: "text-embedding-3-small",
+    },
+    vectorStore: {
+      chromaHost: "localhost",
+      chromaPort: 8000,
+      chromaSsl: false,
+      collectionName: "vy_memories",
+      chromaApiKey: "",
+    },
+    server: {
+      name: "vy-mcp-server",
+      version: "0.0.1",
+      description: "Vy semantic memory MCP server",
+    },
+    logging: {
+      level: "info",
+      structured: true,
+    },
+    limits: {
+      maxConversationLength: 50000,
+      maxSearchResults: 20,
+      maxContextMemories: 10,
+    },
+  };
+
+  // Process required sections first (should only be essential section now)
   for (const section of CONFIG_SECTIONS.filter((s) => s.required)) {
     console.log(chalk.bold(`\n${section.label}`));
     console.log(chalk.gray(section.description));
 
     for (const field of section.fields) {
-      let promptType = "text";
-      let choices;
+      if (!field) continue; // Skip any undefined fields
 
-      if (field.type === "boolean") {
-        promptType = "confirm";
-      } else if (field.type === "number") {
-        promptType = "number";
-      } else if (field.type === "select" && field.options) {
-        promptType = "select";
-        choices = field.options.map((option) => ({
-          title: option,
-          value: option,
-        }));
+      const response = await promptForField(field, promptDefaults);
+
+      // Handle cancelled prompt (Ctrl+C)
+      if (response === null) {
+        console.log(chalk.yellow("\n⚠️  Setup cancelled by user"));
+        process.exit(0);
       }
 
-      const response = await prompts({
-        type: promptType as "text" | "select",
-        name: "value",
-        message: field.required
-          ? `${field.label}:`
-          : `${field.label} (optional):`,
-        initial: getNestedValue(
-          {
-            embedding: { model: "text-embedding-3-small" },
-            vectorStore: {
-              chromaHost: "localhost",
-              chromaPort: 8000,
-              chromaSsl: false,
-              collectionName: "vy_memories",
-            },
-            logging: { level: "info" },
-          },
-          field.path,
-        ) as string | number | boolean,
-        choices,
-        validate: field.required
-          ? (value: unknown) => {
-              if (value === "" || value === null || value === undefined) {
-                return "This field is required";
-              }
-              return true;
-            }
-          : undefined,
-      });
-
-      if (response.value !== undefined && response.value !== "") {
-        setNestedValue(config, field.path, response.value);
+      if (isValidConfigValue(response)) {
+        setNestedValue(config, field.path, response);
       }
     }
   }
 
   // Ask about optional advanced settings
-  const { configureAdvanced } = await prompts({
+  const advancedResponse = await prompts({
     type: "confirm",
     name: "configureAdvanced",
     message: "🔧 Configure advanced options?",
     initial: false,
   });
 
-  if (configureAdvanced) {
+  // Handle cancelled prompt
+  if (advancedResponse.configureAdvanced === undefined) {
+    console.log(chalk.yellow("\n⚠️  Setup cancelled by user"));
+    process.exit(0);
+  }
+
+  if (advancedResponse.configureAdvanced) {
     for (const section of CONFIG_SECTIONS.filter((s) => !s.required)) {
+      // Skip sections with no fields
+      if (!section.fields || section.fields.length === 0) continue;
+
       console.log(chalk.bold(`\n${section.label}`));
       console.log(chalk.gray(section.description));
 
       for (const field of section.fields) {
-        let promptType = "text";
-        let choices;
+        if (!field) continue; // Skip any undefined fields
 
-        if (field.type === "boolean") {
-          promptType = "confirm";
-        } else if (field.type === "number") {
-          promptType = "number";
-        } else if (field.type === "select" && field.options) {
-          promptType = "select";
-          choices = field.options.map((option) => ({
-            title: option,
-            value: option,
-          }));
+        const response = await promptForField(field, promptDefaults, true);
+
+        // Handle cancelled prompt
+        if (response === null) {
+          console.log(chalk.yellow("\n⚠️  Setup cancelled by user"));
+          process.exit(0);
         }
 
-        const response = await prompts({
-          type: promptType as "text" | "select" | "number",
-          name: "value",
-          message: `${field.label} (press enter for default):`,
-          initial: getNestedValue(
-            {
-              server: { name: "vy-mcp-server" },
-              logging: { level: "info" },
-              limits: {
-                maxConversationLength: 50000,
-                maxSearchResults: 20,
-                maxContextMemories: 10,
-              },
-            },
-            field.path,
-          ) as string | number | boolean,
-          choices,
-        });
-
-        if (response.value !== undefined && response.value !== "") {
-          setNestedValue(config, field.path, response.value);
+        if (isValidConfigValue(response)) {
+          setNestedValue(config, field.path, response);
         }
       }
     }
   }
 
-  return config;
+  return config as Partial<VyConfig>;
+}
+
+/**
+ * Type guard to check if a value is valid for configuration
+ */
+function isValidConfigValue(
+  value: string | number | boolean | null | undefined,
+): value is string | number | boolean {
+  return (
+    value !== null &&
+    value !== undefined &&
+    value !== "" &&
+    (typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean")
+  );
+}
+
+/**
+ * Helper function to prompt for a single field with proper error handling
+ */
+async function promptForField(
+  field: ConfigFieldMeta,
+  defaults: Record<string, unknown>,
+  isOptional = false,
+): Promise<string | number | boolean | null> {
+  let promptType: string = "text";
+  let choices: { title: string; value: string }[] | undefined;
+
+  if (field.type === "boolean") {
+    promptType = "confirm";
+  } else if (field.type === "number") {
+    promptType = "number";
+  } else if (field.type === "select" && field.options) {
+    promptType = "select";
+    choices = field.options.map((option: string) => ({
+      title: option,
+      value: option,
+    }));
+  }
+
+  const initialValue = getNestedValue(defaults, field.path);
+  const message = isOptional
+    ? `${field.label} (press enter for default):`
+    : field.required
+      ? `${field.label}:`
+      : `${field.label} (optional):`;
+
+  const response = await prompts({
+    type: promptType as "text" | "number" | "confirm" | "select",
+    name: "value",
+    message,
+    initial: initialValue as string | number | boolean | undefined,
+    choices,
+    validate:
+      field.required && !isOptional
+        ? (value: unknown) => {
+            if (value === "" || value === null || value === undefined) {
+              return "This field is required";
+            }
+            return true;
+          }
+        : undefined,
+  });
+
+  // Handle cancelled prompt (user pressed Ctrl+C)
+  if (response.value === undefined && Object.keys(response).length === 0) {
+    return null;
+  }
+
+  // Ensure we return the correct type
+  const value = response.value;
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+
+  return null;
 }
 
 /**
@@ -486,14 +545,13 @@ async function testConfiguration(
 /**
  * Utility functions
  */
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  return path
-    .split(".")
-    .reduce(
-      (current: unknown, part: string) =>
-        (current as Record<string, unknown>)?.[part],
-      obj,
-    );
+function getNestedValue(obj: unknown, path: string): unknown {
+  return path.split(".").reduce((current: unknown, part: string) => {
+    if (current && typeof current === "object" && part in current) {
+      return (current as Record<string, unknown>)[part];
+    }
+    return undefined;
+  }, obj);
 }
 
 /**
@@ -502,15 +560,20 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 function setNestedValue(
   obj: Record<string, unknown>,
   path: string,
-  value: unknown,
+  value: string | number | boolean,
 ): void {
   const parts = path.split(".");
-  let current: Record<string, unknown> = obj;
+  let current = obj;
 
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
     if (!part) continue; // Skip empty parts
-    if (!current[part] || typeof current[part] !== "object") {
+
+    if (
+      !current[part] ||
+      typeof current[part] !== "object" ||
+      Array.isArray(current[part])
+    ) {
       current[part] = {};
     }
     current = current[part] as Record<string, unknown>;

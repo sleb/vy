@@ -164,30 +164,38 @@ export const CONFIG_FIELDS: ConfigFieldMeta[] = [
  */
 export const CONFIG_SECTIONS: ConfigSection[] = [
   {
-    key: "required",
-    label: "Required Configuration",
-    description: "Essential settings to get Vy running",
+    key: "essential",
+    label: "Essential Configuration",
+    description: "Core settings to get Vy running",
     required: true,
-    fields: CONFIG_FIELDS.filter((f) => f.required),
+    fields: [
+      CONFIG_FIELDS.find((f) => f.path === "embedding.openaiApiKey")!,
+      CONFIG_FIELDS.find((f) => f.path === "vectorStore.chromaHost")!,
+      CONFIG_FIELDS.find((f) => f.path === "vectorStore.chromaPort")!,
+      CONFIG_FIELDS.find((f) => f.path === "vectorStore.collectionName")!,
+    ],
   },
   {
     key: "chromadb",
-    label: "ChromaDB Configuration",
-    description: "Vector database connection settings",
-    required: true,
-    fields: CONFIG_FIELDS.filter((f) => f.path.startsWith("vectorStore.")),
+    label: "ChromaDB Advanced Settings",
+    description: "Optional ChromaDB connection settings",
+    required: false,
+    fields: [
+      CONFIG_FIELDS.find((f) => f.path === "vectorStore.chromaApiKey")!,
+      CONFIG_FIELDS.find((f) => f.path === "vectorStore.chromaSsl")!,
+    ],
   },
   {
-    key: "embedding",
-    label: "Embedding Configuration",
-    description: "OpenAI embedding service settings",
-    required: true,
-    fields: CONFIG_FIELDS.filter((f) => f.path.startsWith("embedding.")),
+    key: "openai",
+    label: "OpenAI Advanced Settings",
+    description: "Optional OpenAI embedding configuration",
+    required: false,
+    fields: [CONFIG_FIELDS.find((f) => f.path === "embedding.model")!],
   },
   {
     key: "server",
-    label: "Server Configuration",
-    description: "MCP server behavior and identification",
+    label: "Server & Logging",
+    description: "Server behavior and logging configuration",
     required: false,
     fields: CONFIG_FIELDS.filter(
       (f) => f.path.startsWith("server.") || f.path.startsWith("logging."),
@@ -196,7 +204,7 @@ export const CONFIG_SECTIONS: ConfigSection[] = [
   {
     key: "limits",
     label: "Performance Limits",
-    description: "Resource limits and constraints",
+    description: "Resource limits and performance tuning",
     required: false,
     fields: CONFIG_FIELDS.filter((f) => f.path.startsWith("limits.")),
   },
