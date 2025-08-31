@@ -23,12 +23,51 @@ import {
 import { createMcpClient } from "../../lib/mcp-client.js";
 import { handleError, validateConfig } from "../../lib/utils.js";
 
+// Command option interfaces
+interface CaptureOptions {
+  participants?: string[];
+  tags?: string[];
+  metadata?: string;
+  summary?: string;
+  fromFile?: string;
+  verbose?: boolean;
+}
+
+interface SearchOptions {
+  limit?: string;
+  types?: string[];
+  since?: string;
+  until?: string;
+  minScore?: string;
+  json?: boolean;
+  verbose?: boolean;
+}
+
+interface ContextOptions {
+  query?: string;
+  memories?: string;
+  json?: boolean;
+  verbose?: boolean;
+}
+
+interface ListOptions {
+  limit?: string;
+  type?: string;
+  since?: string;
+  verbose?: boolean;
+}
+
+interface DeleteOptions {
+  force?: boolean;
+  verbose?: boolean;
+}
+
 /**
  * Capture a conversation or thought in semantic memory
  */
 export async function capture(
   text?: string,
-  options?: Record<string, unknown>,
+  options: CaptureOptions = {},
 ): Promise<void> {
   const spinner = ora("Initializing memory capture...").start();
 
@@ -95,29 +134,29 @@ export async function capture(
     spinner.succeed(`Memory captured in ${formatDuration(duration)}`);
 
     // Display results
-    if (result.success) {
+    if ((result as any).success) {
       console.log(chalk.green("\n✅ Successfully captured memory"));
-      console.log(chalk.gray(`   Memory ID: ${result.memoryId}`));
+      console.log(chalk.gray(`   Memory ID: ${(result as any).memoryId}`));
 
-      if (result.extractedInsights?.length) {
+      if ((result as any).extractedInsights?.length) {
         console.log(chalk.blue("\n💡 Extracted insights:"));
-        result.extractedInsights.forEach((insight: string) => {
+        (result as any).extractedInsights.forEach((insight: string) => {
           console.log(chalk.gray(`   • ${insight}`));
         });
       }
 
-      if (result.actionItems?.length) {
+      if ((result as any).actionItems?.length) {
         console.log(chalk.yellow("\n📋 Action items:"));
-        result.actionItems.forEach((item: string) => {
+        (result as any).actionItems.forEach((item: string) => {
           console.log(chalk.gray(`   • ${item}`));
         });
       }
     } else {
-      throw new Error(result.message || "Failed to capture memory");
+      throw new Error((result as any).message || "Failed to capture memory");
     }
   } catch (error) {
     spinner.fail("Memory capture failed");
-    handleError(error, options?.verbose);
+    handleError(error, options.verbose);
   }
 }
 
@@ -126,7 +165,7 @@ export async function capture(
  */
 export async function search(
   query: string,
-  options?: Record<string, unknown>,
+  options: SearchOptions = {},
 ): Promise<void> {
   const spinner = ora("Searching memories...").start();
 
@@ -136,9 +175,9 @@ export async function search(
     // Build search arguments
     const args: SearchMemoryArgs = {
       query,
-      limit: parseInt(options?.limit || "10"),
-      ...(options?.types && { types: options.types }),
-      ...(options?.minScore && {
+      limit: parseInt(options.limit || "10"),
+      ...(options.types && { types: options.types }),
+      ...(options.minScore && {
         minRelevanceScore: parseFloat(options.minScore),
       }),
     };
@@ -161,28 +200,35 @@ export async function search(
     const duration = Date.now() - startTime;
 
     await client.close();
+
+    const typedResult = result as {
+      success: boolean;
+      totalCount: number;
+      results?: Array<Record<string, unknown>>;
+    };
+
     spinner.succeed(
-      `Found ${result.totalCount} memories in ${formatDuration(duration)}`,
+      `Found ${typedResult.totalCount} memories in ${formatDuration(duration)}`,
     );
 
     // Display results
-    if (result.success && result.results?.length) {
-      if (options?.json) {
-        console.log(JSON.stringify(result, null, 2));
+    if (typedResult.success && typedResult.results?.length) {
+      if (options.json) {
+        console.log(JSON.stringify(typedResult.results, null, 2));
         return;
       }
 
       console.log(chalk.blue(`\n🔍 Search results for: "${query}"`));
       console.log(
         chalk.gray(
-          `   Found ${result.totalCount} memories (showing ${result.results.length})\n`,
+          `   Found ${typedResult.totalCount} memories (showing ${typedResult.results.length})\n`,
         ),
       );
 
       // Format as table
       const tableData = [["Score", "Type", "Date", "Snippet"]];
 
-      result.results.forEach((memory: Record<string, unknown>) => {
+      typedResult.results.forEach((memory: Record<string, unknown>) => {
         tableData.push([
           chalk.green((memory.relevanceScore * 100).toFixed(1) + "%"),
           chalk.yellow(memory.type),
@@ -224,9 +270,7 @@ export async function search(
 /**
  * Get relevant context for current situation
  */
-export async function context(
-  options?: Record<string, unknown>,
-): Promise<void> {
+export async function context(options: ContextOptions = {}): Promise<void> {
   const spinner = ora("Retrieving context...").start();
 
   try {
@@ -307,14 +351,14 @@ export async function context(
     }
   } catch (error) {
     spinner.fail("Context retrieval failed");
-    handleError(error, options?.verbose);
+    handleError(error, options.verbose);
   }
 }
 
 /**
  * List stored memories
  */
-export async function list(options?: Record<string, unknown>): Promise<void> {
+export async function list(options: ListOptions = {}): Promise<void> {
   const spinner = ora("Loading memories...").start();
 
   try {
@@ -323,12 +367,12 @@ export async function list(options?: Record<string, unknown>): Promise<void> {
     // Use search with empty query to list memories
     const args: SearchMemoryArgs = {
       query: "",
-      limit: parseInt(options?.limit || "20"),
-      ...(options?.type && { types: [options.type] }),
+      limit: parseInt(options.limit || "20"),
+      ...(options.type && { types: [options.type] }),
     };
 
     // Handle date filters
-    if (options?.since) {
+    if (options.since) {
       args.timeRange = { start: new Date(options.since).toISOString() };
     }
 
@@ -384,7 +428,7 @@ export async function list(options?: Record<string, unknown>): Promise<void> {
     }
   } catch (error) {
     spinner.fail("Failed to load memories");
-    handleError(error, options?.verbose);
+    handleError(error, options.verbose);
   }
 }
 
@@ -393,7 +437,7 @@ export async function list(options?: Record<string, unknown>): Promise<void> {
  */
 export async function remove(
   memoryId: string,
-  options?: Record<string, unknown>,
+  options: DeleteOptions = {},
 ): Promise<void> {
   const spinner = ora("Preparing to delete memory...").start();
 
@@ -428,7 +472,7 @@ export async function remove(
     console.log(chalk.gray(`   Memory ID: ${memoryId}`));
   } catch (error) {
     spinner.fail("Delete operation failed");
-    handleError(error, options?.verbose);
+    handleError(error, options.verbose);
   }
 }
 

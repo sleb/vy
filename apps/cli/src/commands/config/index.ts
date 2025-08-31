@@ -10,6 +10,7 @@
 
 import {
   CONFIG_SECTIONS,
+  DEFAULT_CONFIG,
   getSensitivePaths,
   parseConfigValue,
   validateConfig,
@@ -114,7 +115,10 @@ export const configCommands = {
         ];
 
         for (const field of section.fields) {
-          const value = getNestedValue(config, field.path);
+          const value = getNestedValue(
+            config as Record<string, unknown>,
+            field.path,
+          );
           const source = getNestedValue(sources, field.path);
 
           let displayValue: string;
@@ -126,7 +130,7 @@ export const configCommands = {
             displayValue = chalk.white(String(value));
           }
 
-          const sourceColor = getSourceColor(source);
+          const sourceColor = getSourceColor(source as string);
           const displaySource = sourceColor(String(source));
 
           sectionData.push([field.label, displayValue, displaySource]);
@@ -341,7 +345,7 @@ async function runInteractiveSetup(): Promise<Partial<VyConfig>> {
             logging: { level: "info" },
           },
           field.path,
-        ),
+        ) as string | number | boolean,
         choices,
         validate: field.required
           ? (value: unknown) => {
@@ -403,7 +407,7 @@ async function runInteractiveSetup(): Promise<Partial<VyConfig>> {
               },
             },
             field.path,
-          ),
+          ) as string | number | boolean,
           choices,
         });
 
@@ -486,7 +490,8 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   return path
     .split(".")
     .reduce(
-      (current, part) => (current as Record<string, unknown>)?.[part],
+      (current: unknown, part: string) =>
+        (current as Record<string, unknown>)?.[part],
       obj,
     );
 }

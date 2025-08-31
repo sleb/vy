@@ -59,8 +59,10 @@ describe("ChromaMemoryStore", () => {
         content: "Test conversation content",
         timestamp: new Date(),
         metadata: {},
-        participants: ["user", "assistant"],
-        messageCount: 2,
+        conversationData: {
+          participants: ["user", "assistant"],
+          messageCount: 2,
+        },
       };
 
       mockEmbeddingService.generateEmbedding = vi
@@ -82,8 +84,8 @@ describe("ChromaMemoryStore", () => {
             metadata: expect.objectContaining({
               type: "conversation",
               timestamp: memory.timestamp.toISOString(),
-              participants: memory.participants,
-              messageCount: memory.messageCount,
+              participants: memory.conversationData.participants,
+              messageCount: memory.conversationData.messageCount,
             }),
           }),
         ]),
@@ -108,8 +110,10 @@ describe("ChromaMemoryStore", () => {
         content: "Another test conversation",
         timestamp: new Date(),
         metadata: { topic: "testing" },
-        participants: ["user"],
-        messageCount: 1,
+        conversationData: {
+          participants: ["user"],
+          messageCount: 1,
+        },
       };
 
       const mockEmbedding = [0.1, 0.2, 0.3];
@@ -147,11 +151,13 @@ describe("ChromaMemoryStore", () => {
       // Arrange
       const memory = {
         type: "conversation",
-        content: "Test content",
+        content: "Test conversation content",
         timestamp: new Date(),
         metadata: {},
-        participants: [],
-        messageCount: 1,
+        conversationData: {
+          participants: [],
+          messageCount: 1,
+        },
       } as Omit<ConversationMemory, "id">;
 
       mockEmbeddingService.generateEmbedding = vi
@@ -185,9 +191,10 @@ describe("ChromaMemoryStore", () => {
         content: "User asked about weather, I provided forecast",
         timestamp: new Date("2024-01-15T10:30:00Z"),
         metadata: { location: "San Francisco", confidence: 0.95 },
-        participants: ["user", "assistant"],
-        messageCount: 4,
-        tags: ["weather", "forecast"],
+        conversationData: {
+          participants: ["user", "assistant"],
+          messageCount: 4,
+        },
       };
 
       const embedding = [0.1, 0.2, 0.3, 0.4];
@@ -369,8 +376,8 @@ describe("ChromaMemoryStore", () => {
 
       // Assert - only high relevance result should be returned
       expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("high-relevance");
-      expect(results[0].relevanceScore).toBe(0.9); // 1 - 0.1
+      expect(results[0]?.id).toBe("high-relevance");
+      expect(results[0]?.relevanceScore).toBe(0.9); // 1 - 0.1
     });
   });
 
@@ -383,8 +390,10 @@ describe("ChromaMemoryStore", () => {
         content: "This will fail initially",
         timestamp: new Date(),
         metadata: {},
-        participants: ["user"],
-        messageCount: 1,
+        conversationData: {
+          participants: ["user"],
+          messageCount: 1,
+        },
       };
 
       // Simulate initial embedding failure
