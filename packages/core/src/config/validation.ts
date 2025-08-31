@@ -195,7 +195,7 @@ function validateFieldSpecific(
   const errors: ConfigValidationError[] = [];
 
   switch (path) {
-    case "embedding.openaiApiKey":
+    case "embedding.openaiApiKey": {
       if (typeof value === "string") {
         if (!value.startsWith("sk-")) {
           errors.push({
@@ -213,8 +213,9 @@ function validateFieldSpecific(
         }
       }
       break;
+    }
 
-    case "embedding.model":
+    case "embedding.model": {
       if (typeof value === "string") {
         const supportedModels = [
           "text-embedding-3-small",
@@ -231,6 +232,7 @@ function validateFieldSpecific(
         }
       }
       break;
+    }
 
     case "vectorStore.chromaHost":
       if (typeof value === "string") {
@@ -418,15 +420,17 @@ export function parseConfigValue(path: string, stringValue: string): unknown {
   }
 
   switch (fieldMeta.type) {
-    case "number":
+    case "number": {
       const num = parseInt(stringValue, 10);
       return isNaN(num) ? stringValue : num;
+    }
 
-    case "boolean":
+    case "boolean": {
       const lower = stringValue.toLowerCase();
       if (lower === "true" || lower === "1" || lower === "yes") return true;
       if (lower === "false" || lower === "0" || lower === "no") return false;
       return stringValue;
+    }
 
     case "string":
     case "select":
@@ -440,11 +444,11 @@ export function parseConfigValue(path: string, stringValue: string): unknown {
  */
 export function getConfigValue(config: VyConfig, path: string): unknown {
   const parts = path.split(".");
-  let current: any = config;
+  let current: unknown = config;
 
   for (const part of parts) {
     if (current && typeof current === "object" && part in current) {
-      current = current[part];
+      current = (current as Record<string, unknown>)[part];
     } else {
       return undefined;
     }
@@ -463,7 +467,7 @@ export function setConfigValue(
 ): VyConfig {
   const parts = path.split(".");
   const result = JSON.parse(JSON.stringify(config)); // Deep clone
-  let current: any = result;
+  let current: Record<string, unknown> = result as Record<string, unknown>;
 
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
@@ -471,7 +475,7 @@ export function setConfigValue(
       current[part] = {};
     }
     if (part) {
-      current = current[part];
+      current = current[part] as Record<string, unknown>;
     }
   }
 

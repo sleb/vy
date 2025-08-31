@@ -7,7 +7,7 @@
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,7 +30,7 @@ const DEFAULT_CONFIG: Required<McpClientConfig> = {
   serverPath: join(__dirname, "../../../mcp-server-basic/dist/cli.js"),
   timeout: 30000,
   retries: 3,
-  env: {}
+  env: {},
 };
 
 /**
@@ -39,7 +39,7 @@ const DEFAULT_CONFIG: Required<McpClientConfig> = {
 export class VyMcpClient {
   private client: Client;
   private transport: StdioClientTransport;
-  private serverProcess: any;
+  private serverProcess: ChildProcess | null = null;
   private connected = false;
   private config: Required<McpClientConfig>;
 
@@ -61,8 +61,8 @@ export class VyMcpClient {
         stdio: ["pipe", "pipe", "inherit"],
         env: {
           ...process.env,
-          ...this.config.env
-        }
+          ...this.config.env,
+        },
       });
 
       // Handle server process errors
@@ -79,18 +79,18 @@ export class VyMcpClient {
       // Create transport using the server's stdio
       this.transport = new StdioClientTransport(
         this.serverProcess.stdout,
-        this.serverProcess.stdin
+        this.serverProcess.stdin,
       );
 
       // Create MCP client
       this.client = new Client(
         {
           name: "vy-cli",
-          version: "0.0.1"
+          version: "0.0.1",
         },
         {
-          capabilities: {}
-        }
+          capabilities: {},
+        },
       );
 
       // Connect client to transport
@@ -106,23 +106,28 @@ export class VyMcpClient {
   /**
    * Call a tool on the MCP server
    */
-  async callTool(name: string, arguments_: unknown): Promise<any> {
+  async callTool(name: string, arguments_: unknown): Promise<unknown> {
     if (!this.connected) {
       await this.connect();
     }
 
     try {
-      const result = await this.client.callTool({ name, arguments: arguments_ });
+      const result = await this.client.callTool({
+        name,
+        arguments: arguments_,
+      });
       return result.content;
     } catch (error) {
-      throw new Error(`Tool call failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Tool call failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   /**
    * List available tools
    */
-  async listTools(): Promise<any[]> {
+  async listTools(): Promise<Array<{ name?: string }>> {
     if (!this.connected) {
       await this.connect();
     }
@@ -131,14 +136,20 @@ export class VyMcpClient {
       const result = await this.client.listTools();
       return result.tools || [];
     } catch (error) {
-      throw new Error(`Failed to list tools: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to list tools: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   /**
    * Get server information
    */
-  async getServerInfo(): Promise<any> {
+  async getServerInfo(): Promise<{
+    name: string;
+    version: string;
+    connected: boolean;
+  }> {
     if (!this.connected) {
       await this.connect();
     }
@@ -148,10 +159,12 @@ export class VyMcpClient {
       return {
         name: "vy-mcp-server",
         version: "0.0.1",
-        connected: this.connected
+        connected: this.connected,
       };
     } catch (error) {
-      throw new Error(`Failed to get server info: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to get server info: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -215,7 +228,9 @@ export class VyMcpClient {
 /**
  * Create a new MCP client with default configuration
  */
-export async function createMcpClient(config?: McpClientConfig): Promise<VyMcpClient> {
+export async function createMcpClient(
+  config?: McpClientConfig,
+): Promise<VyMcpClient> {
   const client = new VyMcpClient(config);
   await client.connect();
   return client;
@@ -224,7 +239,9 @@ export async function createMcpClient(config?: McpClientConfig): Promise<VyMcpCl
 /**
  * Test MCP server connectivity
  */
-export async function testConnection(config?: McpClientConfig): Promise<boolean> {
+export async function testConnection(
+  config?: McpClientConfig,
+): Promise<boolean> {
   let client: VyMcpClient | null = null;
 
   try {
@@ -243,13 +260,15 @@ export async function testConnection(config?: McpClientConfig): Promise<boolean>
 /**
  * Get available tools from the server
  */
-export async function getAvailableTools(config?: McpClientConfig): Promise<string[]> {
+export async function getAvailableTools(
+  config?: McpClientConfig,
+): Promise<string[]> {
   let client: VyMcpClient | null = null;
 
   try {
     client = await createMcpClient(config);
     const tools = await client.listTools();
-    return tools.map((tool: any) => tool.name || "unknown");
+    return tools.map((tool: { name?: string }) => tool.name || "unknown");
   } catch {
     return [];
   } finally {

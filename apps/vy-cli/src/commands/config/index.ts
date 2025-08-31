@@ -299,7 +299,7 @@ export const configCommands = {
  * Run interactive configuration setup
  */
 async function runInteractiveSetup(): Promise<Partial<VyConfig>> {
-  const config: any = {};
+  const config: Record<string, unknown> = {};
 
   for (const section of CONFIG_SECTIONS.filter((s) => s.required)) {
     console.log(chalk.bold(`\n${section.label}`));
@@ -322,7 +322,7 @@ async function runInteractiveSetup(): Promise<Partial<VyConfig>> {
       }
 
       const response = await prompts({
-        type: promptType as any,
+        type: promptType as "text" | "select",
         name: "value",
         message: field.required
           ? `${field.label}:`
@@ -342,7 +342,7 @@ async function runInteractiveSetup(): Promise<Partial<VyConfig>> {
         ),
         choices,
         validate: field.required
-          ? (value: any) => {
+          ? (value: unknown) => {
               if (value === "" || value === null || value === undefined) {
                 return "This field is required";
               }
@@ -387,7 +387,7 @@ async function runInteractiveSetup(): Promise<Partial<VyConfig>> {
         }
 
         const response = await prompts({
-          type: promptType as any,
+          type: promptType as "text" | "select" | "number",
           name: "value",
           message: `${field.label} (press enter for default):`,
           initial: getNestedValue(
@@ -478,18 +478,27 @@ async function testConfiguration(
 }
 
 /**
- * Get nested value from object using dot notation
+ * Utility functions
  */
-function getNestedValue(obj: any, path: string): any {
-  return path.split(".").reduce((current, part) => current?.[part], obj);
+function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+  return path
+    .split(".")
+    .reduce(
+      (current, part) => (current as Record<string, unknown>)?.[part],
+      obj,
+    );
 }
 
 /**
  * Set nested value in object using dot notation
  */
-function setNestedValue(obj: any, path: string, value: any): void {
+function setNestedValue(
+  obj: Record<string, unknown>,
+  path: string,
+  value: unknown,
+): void {
   const parts = path.split(".");
-  let current = obj;
+  let current: Record<string, unknown> = obj;
 
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
@@ -497,7 +506,7 @@ function setNestedValue(obj: any, path: string, value: any): void {
     if (!current[part] || typeof current[part] !== "object") {
       current[part] = {};
     }
-    current = current[part];
+    current = current[part] as Record<string, unknown>;
   }
 
   const lastPart = parts[parts.length - 1];

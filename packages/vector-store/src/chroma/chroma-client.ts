@@ -12,6 +12,70 @@ import type {
 } from "../config.js";
 
 /**
+ * ChromaDB client interface (from chromadb package)
+ */
+interface ChromaDbClient {
+  heartbeat(): Promise<number>;
+  createCollection(params: {
+    name: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<ChromaDbCollection>;
+  getOrCreateCollection(params: {
+    name: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<ChromaDbCollection>;
+  deleteCollection(params: { name: string }): Promise<void>;
+  listCollections(): Promise<ChromaDbCollection[]>;
+  getCollection(params: { name: string }): Promise<ChromaDbCollection>;
+}
+
+/**
+ * ChromaDB collection interface (from chromadb package)
+ */
+interface ChromaDbCollection {
+  name: string;
+  id: string;
+  metadata?: Record<string, unknown>;
+  add(params: {
+    ids: string[];
+    embeddings: number[][];
+    metadatas: Record<string, unknown>[];
+    documents: string[];
+  }): Promise<void>;
+  update(params: {
+    ids: string[];
+    embeddings: number[][];
+    metadatas: Record<string, unknown>[];
+    documents: string[];
+  }): Promise<void>;
+  delete(params: { ids: string[] }): Promise<void>;
+  get(params: { ids: string[] }): Promise<{
+    ids: string[];
+    embeddings?: number[][];
+    metadatas?: (Record<string, unknown> | null)[];
+    documents?: (string | null)[];
+  }>;
+  query(params: {
+    queryEmbeddings: number[][];
+    nResults: number;
+    where?: Record<string, unknown>;
+    include?: string[];
+  }): Promise<ChromaQueryResult>;
+  count(): Promise<number>;
+}
+
+/**
+ * ChromaDB client options
+ */
+interface ChromaDbClientOptions {
+  path: string;
+  auth?: {
+    provider: string;
+    credentials: string;
+  };
+}
+
+/**
  * ChromaDB collection interface
  */
 export interface ChromaCollection {
@@ -45,7 +109,7 @@ export interface ChromaQueryResult {
  */
 export class ChromaClient {
   private readonly config: ChromaConfig;
-  private client: any; // ChromaDB client instance
+  private client: ChromaDbClient | null = null;
   private connected = false;
 
   constructor(config: ChromaConfig) {
@@ -67,7 +131,7 @@ export class ChromaClient {
       // Determine if this is hosted or local config
       const isHosted = "apiKey" in this.config && "ssl" in this.config;
 
-      const clientOptions: any = {
+      const clientOptions: ChromaDbClientOptions = {
         path: `${isHosted ? "https" : "http"}://${this.config.host}:${this.config.port}`,
       };
 
@@ -176,7 +240,7 @@ export class ChromaClient {
 
     try {
       const collections = await this.client.listCollections();
-      return collections.map((col: any) => ({
+      return collections.map((col) => ({
         name: col.name,
         id: col.id,
         metadata: col.metadata,

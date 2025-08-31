@@ -17,7 +17,7 @@ export const CONFIG_PATHS = {
   home: join(homedir(), ".vy"),
   config: join(homedir(), ".vy", "config.json"),
   logs: join(homedir(), ".vy", "logs"),
-  cache: join(homedir(), ".vy", "cache")
+  cache: join(homedir(), ".vy", "cache"),
 };
 
 /**
@@ -31,15 +31,13 @@ export const ENV_KEYS = {
   VY_CHROMA_SSL: "VY_CHROMA_SSL",
   VY_COLLECTION_NAME: "VY_COLLECTION_NAME",
   VY_EMBEDDING_MODEL: "VY_EMBEDDING_MODEL",
-  VY_LOG_LEVEL: "VY_LOG_LEVEL"
+  VY_LOG_LEVEL: "VY_LOG_LEVEL",
 } as const;
 
 /**
  * Required environment variables
  */
-export const REQUIRED_ENV_VARS = [
-  ENV_KEYS.VY_OPENAI_API_KEY
-];
+export const REQUIRED_ENV_VARS = [ENV_KEYS.VY_OPENAI_API_KEY];
 
 /**
  * Validate that required configuration is present
@@ -56,7 +54,7 @@ export async function validateConfig(): Promise<void> {
   if (missingVars.length > 0) {
     throw new Error(
       `Missing required environment variables: ${missingVars.join(", ")}\n` +
-      "Run 'vy config init' to set up your configuration."
+        "Run 'vy config init' to set up your configuration.",
     );
   }
 
@@ -72,8 +70,10 @@ export async function validateConfig(): Promise<void> {
  * Check if configuration exists
  */
 export function hasConfig(): boolean {
-  return existsSync(CONFIG_PATHS.config) ||
-         Boolean(process.env[ENV_KEYS.VY_OPENAI_API_KEY]);
+  return (
+    existsSync(CONFIG_PATHS.config) ||
+    Boolean(process.env[ENV_KEYS.VY_OPENAI_API_KEY])
+  );
 }
 
 /**
@@ -87,8 +87,9 @@ export function getConfigSummary(): Record<string, unknown> {
     hasChromaKey: Boolean(process.env[ENV_KEYS.VY_CHROMA_API_KEY]),
     chromaSSL: process.env[ENV_KEYS.VY_CHROMA_SSL] === "true",
     collectionName: process.env[ENV_KEYS.VY_COLLECTION_NAME] || "vy_memories",
-    embeddingModel: process.env[ENV_KEYS.VY_EMBEDDING_MODEL] || "text-embedding-3-small",
-    logLevel: process.env[ENV_KEYS.VY_LOG_LEVEL] || "info"
+    embeddingModel:
+      process.env[ENV_KEYS.VY_EMBEDDING_MODEL] || "text-embedding-3-small",
+    logLevel: process.env[ENV_KEYS.VY_LOG_LEVEL] || "info",
   };
 }
 
@@ -106,13 +107,25 @@ export function handleError(error: unknown, verbose = false): never {
 
     // Provide helpful hints for common errors
     if (error.message.includes("Missing required environment variables")) {
-      console.error(chalk.yellow("\n💡 Hint: Run 'vy config init' to set up your configuration"));
+      console.error(
+        chalk.yellow(
+          "\n💡 Hint: Run 'vy config init' to set up your configuration",
+        ),
+      );
     } else if (error.message.includes("ChromaDB")) {
-      console.error(chalk.yellow("\n💡 Hint: Make sure ChromaDB is running and accessible"));
+      console.error(
+        chalk.yellow("\n💡 Hint: Make sure ChromaDB is running and accessible"),
+      );
     } else if (error.message.includes("OpenAI")) {
-      console.error(chalk.yellow("\n💡 Hint: Check your OpenAI API key configuration"));
+      console.error(
+        chalk.yellow("\n💡 Hint: Check your OpenAI API key configuration"),
+      );
     } else if (error.message.includes("MCP server")) {
-      console.error(chalk.yellow("\n💡 Hint: Try 'vy server health' to check server status"));
+      console.error(
+        chalk.yellow(
+          "\n💡 Hint: Try 'vy server health' to check server status",
+        ),
+      );
     }
   } else {
     console.error(chalk.red("❌ Unknown error:"), String(error));
@@ -179,7 +192,7 @@ export function formatTimestamp(timestamp: string): string {
  * Format file size in bytes to human-readable format
  */
 export function formatFileSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB'];
+  const units = ["B", "KB", "MB", "GB"];
   let size = bytes;
   let unitIndex = 0;
 
@@ -207,10 +220,7 @@ export function truncate(text: string, maxLength: number): string {
  */
 export function formatMemory(content: string, maxLength: number = 100): string {
   // Clean up whitespace and newlines
-  const cleaned = content
-    .replace(/\s+/g, " ")
-    .replace(/\n+/g, " ")
-    .trim();
+  const cleaned = content.replace(/\s+/g, " ").replace(/\n+/g, " ").trim();
 
   return truncate(cleaned, maxLength);
 }
@@ -222,14 +232,19 @@ export function safeJsonParse(json: string): unknown {
   try {
     return JSON.parse(json);
   } catch (error) {
-    throw new Error(`Invalid JSON format: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(
+      `Invalid JSON format: ${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 }
 
 /**
  * Convert string to boolean safely
  */
-export function parseBoolean(value: string | undefined, defaultValue = false): boolean {
+export function parseBoolean(
+  value: string | undefined,
+  defaultValue = false,
+): boolean {
   if (!value) return defaultValue;
 
   const lower = value.toLowerCase();
@@ -247,7 +262,9 @@ export function getEnv(key: string, defaultValue = ""): string {
  * Check if running in development mode
  */
 export function isDevelopment(): boolean {
-  return process.env.NODE_ENV === "development" || process.env.VY_DEV === "true";
+  return (
+    process.env.NODE_ENV === "development" || process.env.VY_DEV === "true"
+  );
 }
 
 /**
@@ -261,7 +278,7 @@ export function isVerbose(): boolean {
  * Sleep for specified milliseconds
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -270,7 +287,7 @@ export function sleep(ms: number): Promise<void> {
 export async function retry<T>(
   fn: () => Promise<T>,
   maxAttempts = 3,
-  baseDelay = 1000
+  baseDelay = 1000,
 ): Promise<T> {
   let lastError: Error;
 
@@ -296,9 +313,9 @@ export async function retry<T>(
 /**
  * Debounce function
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
-  delay: number
+  delay: number,
 ): (...args: Parameters<T>) => void {
   let timeoutId: NodeJS.Timeout;
 
@@ -311,11 +328,17 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * Create a spinner with consistent styling
  */
-export function createSpinner(text: string): any {
+interface Spinner {
+  start: () => void;
+  succeed: (msg?: string) => void;
+  fail: (msg?: string) => void;
+}
+
+export function createSpinner(text: string): Spinner {
   // This would be implemented with ora, but keeping it simple for now
   return {
     start: () => console.log(chalk.blue(`⏳ ${text}...`)),
     succeed: (msg?: string) => console.log(chalk.green(`✅ ${msg || text}`)),
-    fail: (msg?: string) => console.log(chalk.red(`❌ ${msg || text}`))
+    fail: (msg?: string) => console.log(chalk.red(`❌ ${msg || text}`)),
   };
 }

@@ -322,7 +322,7 @@ export class VyToolHandlers implements McpToolHandler {
     context: ToolContext,
     error: unknown,
     args: unknown,
-  ): any {
+  ): CaptureConversationResult | SearchMemoryResult | GetContextResult {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error occurred";
     const duration = Date.now() - context.startTime.getTime();

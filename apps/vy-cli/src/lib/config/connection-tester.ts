@@ -110,7 +110,7 @@ export class ConnectionTester {
           typeof data === "object" &&
           data !== null &&
           "data" in data &&
-          Array.isArray((data as any).data)
+          Array.isArray((data as { data: unknown }).data)
         );
       };
 
@@ -154,10 +154,10 @@ export class ConnectionTester {
         },
         duration,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       const duration = performance.now() - startTime;
 
-      if (error.name === "AbortError") {
+      if ((error as Error).name === "AbortError") {
         return {
           service: "OpenAI API",
           success: false,
@@ -274,7 +274,7 @@ export class ConnectionTester {
       }
 
       // Try to get version information
-      let versionInfo: any = {};
+      let versionInfo: Record<string, unknown> = {};
       try {
         const versionResponse = await fetch(`${baseUrl}/api/v1/version`, {
           method: "GET",
@@ -343,10 +343,10 @@ export class ConnectionTester {
         },
         duration,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       const duration = performance.now() - startTime;
 
-      if (error.name === "AbortError") {
+      if ((error as Error).name === "AbortError") {
         return {
           service: "ChromaDB",
           success: false,

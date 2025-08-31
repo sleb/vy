@@ -5,20 +5,31 @@
  * and retrieving memories from the semantic memory system.
  */
 
-import type { CaptureConversationArgs, GetContextArgs, SearchMemoryArgs } from "@repo/core";
+import type {
+  CaptureConversationArgs,
+  GetContextArgs,
+  SearchMemoryArgs,
+} from "@repo/core";
 import chalk from "chalk";
 import { readFile } from "node:fs/promises";
 import ora from "ora";
 import prompts from "prompts";
 import { table } from "table";
-import { formatDuration, formatMemory, formatTimestamp } from "../../lib/formatters.js";
+import {
+  formatDuration,
+  formatMemory,
+  formatTimestamp,
+} from "../../lib/formatters.js";
 import { createMcpClient } from "../../lib/mcp-client.js";
 import { handleError, validateConfig } from "../../lib/utils.js";
 
 /**
  * Capture a conversation or thought in semantic memory
  */
-export async function capture(text?: string, options?: any): Promise<void> {
+export async function capture(
+  text?: string,
+  options?: Record<string, unknown>,
+): Promise<void> {
   const spinner = ora("Initializing memory capture...").start();
 
   try {
@@ -40,7 +51,8 @@ export async function capture(text?: string, options?: any): Promise<void> {
         type: "text",
         name: "content",
         message: "What would you like to capture?",
-        validate: (value: string) => value.trim().length > 0 || "Content cannot be empty"
+        validate: (value: string) =>
+          value.trim().length > 0 || "Content cannot be empty",
       });
 
       if (!response.content) {
@@ -67,7 +79,7 @@ export async function capture(text?: string, options?: any): Promise<void> {
       ...(options?.participants && { participants: options.participants }),
       ...(options?.tags && { tags: options.tags }),
       ...(options?.summary && { summary: options.summary }),
-      ...(metadata && { metadata })
+      ...(metadata && { metadata }),
     };
 
     // Connect to MCP server and capture
@@ -103,7 +115,6 @@ export async function capture(text?: string, options?: any): Promise<void> {
     } else {
       throw new Error(result.message || "Failed to capture memory");
     }
-
   } catch (error) {
     spinner.fail("Memory capture failed");
     handleError(error, options?.verbose);
@@ -113,7 +124,10 @@ export async function capture(text?: string, options?: any): Promise<void> {
 /**
  * Search semantic memories
  */
-export async function search(query: string, options?: any): Promise<void> {
+export async function search(
+  query: string,
+  options?: Record<string, unknown>,
+): Promise<void> {
   const spinner = ora("Searching memories...").start();
 
   try {
@@ -124,7 +138,9 @@ export async function search(query: string, options?: any): Promise<void> {
       query,
       limit: parseInt(options?.limit || "10"),
       ...(options?.types && { types: options.types }),
-      ...(options?.minScore && { minRelevanceScore: parseFloat(options.minScore) })
+      ...(options?.minScore && {
+        minRelevanceScore: parseFloat(options.minScore),
+      }),
     };
 
     // Handle date filters
@@ -145,7 +161,9 @@ export async function search(query: string, options?: any): Promise<void> {
     const duration = Date.now() - startTime;
 
     await client.close();
-    spinner.succeed(`Found ${result.totalCount} memories in ${formatDuration(duration)}`);
+    spinner.succeed(
+      `Found ${result.totalCount} memories in ${formatDuration(duration)}`,
+    );
 
     // Display results
     if (result.success && result.results?.length) {
@@ -155,38 +173,41 @@ export async function search(query: string, options?: any): Promise<void> {
       }
 
       console.log(chalk.blue(`\n🔍 Search results for: "${query}"`));
-      console.log(chalk.gray(`   Found ${result.totalCount} memories (showing ${result.results.length})\n`));
+      console.log(
+        chalk.gray(
+          `   Found ${result.totalCount} memories (showing ${result.results.length})\n`,
+        ),
+      );
 
       // Format as table
-      const tableData = [
-        ["Score", "Type", "Date", "Snippet"]
-      ];
+      const tableData = [["Score", "Type", "Date", "Snippet"]];
 
-      result.results.forEach((memory: any) => {
+      result.results.forEach((memory: Record<string, unknown>) => {
         tableData.push([
           chalk.green((memory.relevanceScore * 100).toFixed(1) + "%"),
           chalk.yellow(memory.type),
           chalk.gray(formatTimestamp(memory.timestamp)),
-          formatMemory(memory.snippet || memory.content, 60)
+          formatMemory(memory.snippet || memory.content, 60),
         ]);
       });
 
-      console.log(table(tableData, {
-        border: {
-          topBody: "─",
-          topJoin: "┬",
-          topLeft: "┌",
-          topRight: "┐",
-          bottomBody: "─",
-          bottomJoin: "┴",
-          bottomLeft: "└",
-          bottomRight: "┘",
-          bodyLeft: "│",
-          bodyRight: "│",
-          bodyJoin: "│"
-        }
-      }));
-
+      console.log(
+        table(tableData, {
+          border: {
+            topBody: "─",
+            topJoin: "┬",
+            topLeft: "┌",
+            topRight: "┐",
+            bottomBody: "─",
+            bottomJoin: "┴",
+            bottomLeft: "└",
+            bottomRight: "┘",
+            bodyLeft: "│",
+            bodyRight: "│",
+            bodyJoin: "│",
+          },
+        }),
+      );
     } else {
       console.log(chalk.yellow("🔍 No memories found matching your query"));
 
@@ -194,7 +215,6 @@ export async function search(query: string, options?: any): Promise<void> {
         console.log(chalk.gray("   Try using a longer, more specific query"));
       }
     }
-
   } catch (error) {
     spinner.fail("Search failed");
     handleError(error, options?.verbose);
@@ -204,7 +224,9 @@ export async function search(query: string, options?: any): Promise<void> {
 /**
  * Get relevant context for current situation
  */
-export async function context(options?: any): Promise<void> {
+export async function context(
+  options?: Record<string, unknown>,
+): Promise<void> {
   const spinner = ora("Retrieving context...").start();
 
   try {
@@ -218,7 +240,8 @@ export async function context(options?: any): Promise<void> {
         type: "text",
         name: "query",
         message: "What context are you looking for?",
-        validate: (value: string) => value.trim().length > 0 || "Query cannot be empty"
+        validate: (value: string) =>
+          value.trim().length > 0 || "Query cannot be empty",
       });
 
       if (!response.query) {
@@ -234,7 +257,7 @@ export async function context(options?: any): Promise<void> {
       ...(currentQuery && { currentQuery }),
       ...(options?.recent && { recentMessages: options.recent }),
       maxMemories: parseInt(options?.maxMemories || "10"),
-      maxTokens: parseInt(options?.maxTokens || "2000")
+      maxTokens: parseInt(options?.maxTokens || "2000"),
     };
 
     // Connect and get context
@@ -254,24 +277,34 @@ export async function context(options?: any): Promise<void> {
       }
 
       console.log(chalk.blue("\n🎯 Relevant context:"));
-      console.log(chalk.gray(`   ${result.memories.length} memories, ~${result.estimatedTokens} tokens\n`));
+      console.log(
+        chalk.gray(
+          `   ${result.memories.length} memories, ~${result.estimatedTokens} tokens\n`,
+        ),
+      );
 
-      result.memories.forEach((memory: any, index: number) => {
-        const score = (memory.relevanceScore * 100).toFixed(1);
-        console.log(chalk.green(`${index + 1}. [${score}%] ${formatTimestamp(memory.timestamp)}`));
-        console.log(chalk.gray(`   ${formatMemory(memory.content, 120)}\n`));
-      });
+      result.memories.forEach(
+        (memory: Record<string, unknown>, index: number) => {
+          const score = (memory.relevanceScore * 100).toFixed(1);
+          console.log(
+            chalk.green(
+              `${index + 1}. [${score}%] ${formatTimestamp(memory.timestamp)}`,
+            ),
+          );
+          console.log(chalk.gray(`   ${formatMemory(memory.content, 120)}\n`));
+        },
+      );
 
       if (result.selectionReason) {
         console.log(chalk.blue("🤔 Selection reasoning:"));
         console.log(chalk.gray(`   ${result.selectionReason}`));
       }
-
     } else {
       console.log(chalk.yellow("🎯 No relevant context found"));
-      console.log(chalk.gray("   Try a different query or capture more memories first"));
+      console.log(
+        chalk.gray("   Try a different query or capture more memories first"),
+      );
     }
-
   } catch (error) {
     spinner.fail("Context retrieval failed");
     handleError(error, options?.verbose);
@@ -281,7 +314,7 @@ export async function context(options?: any): Promise<void> {
 /**
  * List stored memories
  */
-export async function list(options?: any): Promise<void> {
+export async function list(options?: Record<string, unknown>): Promise<void> {
   const spinner = ora("Loading memories...").start();
 
   try {
@@ -291,7 +324,7 @@ export async function list(options?: any): Promise<void> {
     const args: SearchMemoryArgs = {
       query: "",
       limit: parseInt(options?.limit || "20"),
-      ...(options?.type && { types: [options.type] })
+      ...(options?.type && { types: [options.type] }),
     };
 
     // Handle date filters
@@ -316,25 +349,39 @@ export async function list(options?: any): Promise<void> {
 
       // Sort by date or relevance
       const sortField = options?.sort || "date";
-      const sortedResults = [...result.results].sort((a: any, b: any) => {
-        if (sortField === "relevance") {
-          return b.relevanceScore - a.relevanceScore;
-        }
-        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-      });
+      const sortedResults = [...result.results].sort(
+        (a: Record<string, unknown>, b: Record<string, unknown>) => {
+          if (sortField === "relevance") {
+            return b.relevanceScore - a.relevanceScore;
+          }
+          return (
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          );
+        },
+      );
 
-      sortedResults.forEach((memory: any, index: number) => {
-        console.log(chalk.yellow(`${index + 1}. ${formatTimestamp(memory.timestamp)} [${memory.type}]`));
-        console.log(chalk.gray(`   ${formatMemory(memory.content || memory.snippet, 100)}`));
-        console.log(chalk.gray(`   ID: ${memory.id}\n`));
-      });
-
+      sortedResults.forEach(
+        (memory: Record<string, unknown>, index: number) => {
+          console.log(
+            chalk.yellow(
+              `${index + 1}. ${formatTimestamp(memory.timestamp)} [${memory.type}]`,
+            ),
+          );
+          console.log(
+            chalk.gray(
+              `   ${formatMemory(memory.content || memory.snippet, 100)}`,
+            ),
+          );
+          console.log(chalk.gray(`   ID: ${memory.id}\n`));
+        },
+      );
     } else {
       console.log(chalk.yellow("📋 No memories found"));
-      console.log(chalk.gray("   Start by capturing some conversations or thoughts:"));
-      console.log(chalk.gray("   vy mem capture \"Your first thought...\""));
+      console.log(
+        chalk.gray("   Start by capturing some conversations or thoughts:"),
+      );
+      console.log(chalk.gray('   vy mem capture "Your first thought..."'));
     }
-
   } catch (error) {
     spinner.fail("Failed to load memories");
     handleError(error, options?.verbose);
@@ -344,7 +391,10 @@ export async function list(options?: any): Promise<void> {
 /**
  * Delete memories
  */
-export async function deleteMemory(id: string, options?: any): Promise<void> {
+export async function remove(
+  memoryId: string,
+  options?: Record<string, unknown>,
+): Promise<void> {
   const spinner = ora("Preparing to delete memory...").start();
 
   try {
@@ -356,24 +406,26 @@ export async function deleteMemory(id: string, options?: any): Promise<void> {
       const response = await prompts({
         type: "confirm",
         name: "confirmed",
-        message: `Are you sure you want to delete memory ${id}?`,
-        initial: false
+        message: `Are you sure you want to delete memory ${memoryId}?`,
+        initial: false,
       });
 
       if (!response.confirmed) {
         console.log(chalk.yellow("👋 Deletion cancelled"));
+        console.log(chalk.gray("Memory deletion cancelled"));
         return;
       }
     }
 
-    spinner.start("Deleting memory...");
+    spinner.text = `Deleting memory ${memoryId}...`;
 
     // TODO: Implement memory deletion when available
     // For now, show that the command structure is ready
     spinner.fail("Memory deletion not yet implemented");
-    console.log(chalk.yellow("⚠️  Memory deletion will be implemented in Phase 2"));
-    console.log(chalk.gray(`   Memory ID: ${id}`));
-
+    console.log(
+      chalk.yellow("⚠️  Memory deletion will be implemented in Phase 2"),
+    );
+    console.log(chalk.gray(`   Memory ID: ${memoryId}`));
   } catch (error) {
     spinner.fail("Delete operation failed");
     handleError(error, options?.verbose);
@@ -381,10 +433,10 @@ export async function deleteMemory(id: string, options?: any): Promise<void> {
 }
 
 // Export all commands
-export const memCommands = {
+export const memoryCommands = {
   capture,
   search,
   context,
   list,
-  delete: deleteMemory
+  delete: remove,
 };

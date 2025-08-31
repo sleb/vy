@@ -7,6 +7,7 @@
 
 import type {
   BatchOperationResult,
+  ConversationMemory,
   EmbeddingService,
   Memory,
   MemoryId,
@@ -544,9 +545,9 @@ export class ChromaMemoryStore implements MemoryStore {
         ...memory.metadata,
         // Add type-specific metadata
         ...(memory.type === "conversation" && {
-          participants: (memory as any).participants || [],
-          messageCount: (memory as any).messageCount || 0,
-          tags: (memory as any).tags || [],
+          participants: (memory as ConversationMemory).participants || [],
+          messageCount: (memory as ConversationMemory).messageCount || 0,
+          tags: (memory as ConversationMemory).tags || [],
         }),
       },
     };
@@ -581,7 +582,7 @@ export class ChromaMemoryStore implements MemoryStore {
         participants: (participants as string[]) || [],
         messageCount: (messageCount as number) || 0,
         tags: (tags as string[]) || [],
-      } as any; // TODO: Improve typing
+      } as ConversationMemory;
     }
 
     return baseMemory as Memory;

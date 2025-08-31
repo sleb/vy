@@ -115,7 +115,10 @@ export class ConfigFileManager {
 
     // Set the value in the partial config using dot notation
     const parts = path.split(".");
-    let current: any = updatedUserConfig;
+    let current: Record<string, unknown> = updatedUserConfig as Record<
+      string,
+      unknown
+    >;
 
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
@@ -123,7 +126,7 @@ export class ConfigFileManager {
       if (!current[part] || typeof current[part] !== "object") {
         current[part] = {};
       }
-      current = current[part];
+      current = current[part] as Record<string, unknown>;
     }
 
     const lastPart = parts[parts.length - 1];
@@ -149,8 +152,8 @@ export class ConfigFileManager {
         lastModified: stats.mtime,
         size: stats.size,
       };
-    } catch (error: any) {
-      if (error.code === "ENOENT") {
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return {
           path: this.userConfigPath,
           exists: false,
@@ -197,15 +200,16 @@ export class ConfigFileManager {
   }
 
   /**
-   * Remove configuration file
+   * Remove user configuration file
    */
   async removeConfig(): Promise<void> {
     try {
       await fs.unlink(this.userConfigPath);
-    } catch (error: any) {
-      if (error.code !== "ENOENT") {
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
         throw error;
       }
+      // Ignore if file doesn't exist
     }
   }
 
@@ -216,11 +220,13 @@ export class ConfigFileManager {
     try {
       const configData = await fs.readFile(this.userConfigPath, "utf8");
       return JSON.parse(configData);
-    } catch (error: any) {
-      if (error.code === "ENOENT") {
+    } catch (error: unknown) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return null; // File doesn't exist
       }
-      throw new Error(`Failed to load config file: ${error.message}`);
+      throw new Error(
+        `Failed to load config file: ${(error as Error).message}`,
+      );
     }
   }
 
@@ -228,7 +234,7 @@ export class ConfigFileManager {
    * Load configuration from environment variables
    */
   private loadEnvConfig(): PartialVyConfig {
-    const envConfig: any = {};
+    const envConfig: Record<string, unknown> = {};
 
     for (const [envKey, configPath] of Object.entries(ENV_TO_CONFIG_PATH)) {
       const envValue = process.env[envKey];
@@ -264,9 +270,13 @@ export class ConfigFileManager {
   /**
    * Set nested value in object using dot notation
    */
-  private setNestedValue(obj: any, path: string, value: unknown): void {
+  private setNestedValue(
+    obj: Record<string, unknown>,
+    path: string,
+    value: unknown,
+  ): void {
     const parts = path.split(".");
-    let current = obj;
+    let current: Record<string, unknown> = obj;
 
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
@@ -275,11 +285,11 @@ export class ConfigFileManager {
       if (!current[part] || typeof current[part] !== "object") {
         current[part] = {};
       }
-      current = current[part];
+      current = current[part] as Record<string, unknown>;
     }
 
     const lastPart = parts[parts.length - 1];
-    if (lastPart && current) {
+    if (lastPart) {
       current[lastPart] = value;
     }
   }
@@ -287,7 +297,10 @@ export class ConfigFileManager {
   /**
    * Merge partial configuration into base configuration
    */
-  private mergeConfig(base: any, partial: any): any {
+  private mergeConfig(
+    base: Record<string, unknown>,
+    partial: Record<string, unknown>,
+  ): Record<string, unknown> {
     const result = { ...base };
 
     for (const [key, value] of Object.entries(partial)) {
@@ -305,32 +318,36 @@ export class ConfigFileManager {
    * Create default source tracking structure
    */
   private createDefaultSources(): VyConfigWithSource["sources"] {
-    const sources: any = {};
+    const sources: Record<string, Record<string, "default">> = {};
 
     // Initialize all paths to 'default'
-    const initializeSection = (section: any, prefix = "") => {
+    const initializeSection = (
+      section: Record<string, unknown>,
+      prefix = "",
+    ): void => {
       for (const [key, value] of Object.entries(section)) {
         const path = prefix ? `${prefix}.${key}` : key;
         if (value && typeof value === "object" && !Array.isArray(value)) {
           sources[key] = sources[key] || {};
-          initializeSection(value, path);
+          initializeSection(value as Record<string, unknown>, path);
         } else {
           if (prefix) {
             const parts = prefix.split(".");
-            let current = sources;
+            let current: Record<string, unknown> = sources;
             for (const part of parts) {
               current[part] = current[part] || {};
-              current = current[part];
+              current = current[part] as Record<string, unknown>;
             }
             current[key] = "default";
           } else {
             sources[key] = sources[key] || {};
-            sources[key][key] = "default";
+            (sources[key] as Record<string, unknown>)[key] = "default";
           }
         }
       }
     };
 
+    initializeSection(DEFAULT_CONFIG);
     // Create proper nested structure matching VyConfig
     sources.server = {};
     sources.vectorStore = {};
@@ -363,15 +380,21 @@ export class ConfigFileManager {
    */
   private updateSources(
     sources: VyConfigWithSource["sources"],
-    config: any,
+    config: Record<string, unknown>,
     source: "user-config" | "env-var",
   ): void {
-    const updateSection = (sourceSection: any, configSection: any) => {
+    const updateSection = (
+      sourceSection: Record<string, unknown>,
+      configSection: Record<string, unknown>,
+    ) => {
       for (const [key, value] of Object.entries(configSection)) {
         if (value !== undefined) {
           if (value && typeof value === "object" && !Array.isArray(value)) {
             if (sourceSection[key]) {
-              updateSection(sourceSection[key], value);
+              updateSection(
+                sourceSection[key] as Record<string, unknown>,
+                value as Record<string, unknown>,
+              );
             }
           } else {
             if (sourceSection[key] !== undefined) {
@@ -382,7 +405,7 @@ export class ConfigFileManager {
       }
     };
 
-    updateSection(sources, config);
+    updateSection(sources as Record<string, unknown>, config);
   }
 
   /**
@@ -391,9 +414,9 @@ export class ConfigFileManager {
   private async ensureConfigDirectory(): Promise<void> {
     try {
       await fs.mkdir(this.userConfigDir, { recursive: true, mode: 0o700 });
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw new Error(
-        `Failed to create config directory ${this.userConfigDir}: ${error.message}`,
+        `Failed to create config directory ${this.userConfigDir}: ${(error as Error).message}`,
       );
     }
   }

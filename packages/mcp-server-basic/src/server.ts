@@ -11,12 +11,18 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import type {
+  CaptureConversationArgs,
+  GetContextArgs,
+  SearchMemoryArgs,
+} from "@repo/core";
 import {
   createChromaClient,
   createChromaMemoryStore,
   createHostedConfig,
   createLocalConfig,
   createOpenAIEmbeddingService,
+  type OpenAIEmbeddingModel,
 } from "@repo/vector-store";
 import { createServerConfig, getConfigSummary } from "./config.js";
 import { createLoggerFromConfig } from "./logger.js";
@@ -203,17 +209,14 @@ export class VyMcpServer {
     this.logger.debug("Registering MCP tools...");
 
     try {
-      this.server.setRequestHandler(
-        CallToolRequestSchema,
-        async (request, extra) => {
-          const toolName = request.params.name;
-          const toolArgs = request.params.arguments;
-          this.logger.debug({ toolName, toolArgs }, "Received tool call");
+      this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+        const toolName = request.params.name;
+        const toolArgs = request.params.arguments;
+        this.logger.debug({ toolName, toolArgs }, "Received tool call");
 
-          const result = await this.handleToolCall(toolName, toolArgs);
-          return { content: [{ type: "text", text: JSON.stringify(result) }] };
-        },
-      );
+        const result = await this.handleToolCall(toolName, toolArgs);
+        return { content: [{ type: "text", text: JSON.stringify(result) }] };
+      });
 
       this.logger.debug(
         {
@@ -270,13 +273,17 @@ export class VyMcpServer {
       let result: unknown;
       switch (toolName) {
         case "capture_conversation":
-          result = await this.toolHandlers.captureConversation(args as any);
+          result = await this.toolHandlers.captureConversation(
+            args as CaptureConversationArgs,
+          );
           break;
         case "search_memory":
-          result = await this.toolHandlers.searchMemory(args as any);
+          result = await this.toolHandlers.searchMemory(
+            args as SearchMemoryArgs,
+          );
           break;
         case "get_context":
-          result = await this.toolHandlers.getContext(args as any);
+          result = await this.toolHandlers.getContext(args as GetContextArgs);
           break;
         default:
           throw new Error(`Unknown tool: ${toolName}`);
@@ -426,7 +433,7 @@ export class VyMcpServer {
         },
         embedding: {
           apiKey: embedding.openaiApiKey,
-          model: embedding.model as any, // Type assertion needed for model compatibility
+          model: embedding.model as OpenAIEmbeddingModel,
           dimensions: this.getEmbeddingDimensions(embedding.model),
           maxTokens: 8192,
           batchSize: 100,
