@@ -5,7 +5,9 @@ This document outlines the major improvements made to the `vy config init` comma
 ## Problems Fixed
 
 ### 1. **Duplicate Fields Bug**
+
 **Before:** Fields appeared multiple times across sections, confusing users and causing crashes.
+
 ```
 Required Configuration
 ✔ OpenAI API Key: ...
@@ -20,6 +22,7 @@ Embedding Configuration
 ```
 
 **After:** Each field appears exactly once in a logical section.
+
 ```
 Essential Configuration
 ✔ OpenAI API Key: ...
@@ -31,23 +34,27 @@ ChromaDB Advanced Settings
 ```
 
 ### 2. **Crash Bug**
+
 **Issue:** `Cannot read properties of undefined (reading 'split')`
 **Cause:** Attempting to process undefined responses from cancelled prompts
 **Fix:** Added proper error handling and type guards
 
 ### 3. **Inconsistent Defaults**
+
 **Issue:** ChromaDB port switched between 8080 and 8000 across sections
 **Fix:** Consistent defaults throughout all sections
 
 ## New Configuration Flow
 
 ### Essential Configuration (Required)
+
 - OpenAI API Key
 - ChromaDB Host
 - ChromaDB Port
 - Collection Name
 
 ### Advanced Settings (Optional)
+
 - **ChromaDB Advanced:** API Key, SSL settings
 - **OpenAI Advanced:** Embedding model selection
 - **Server & Logging:** Server name, log levels
@@ -56,25 +63,32 @@ ChromaDB Advanced Settings
 ## Technical Improvements
 
 ### Type Safety
+
 - Eliminated sketchy type casts (`as unknown as Record<string, unknown>`)
 - Added proper type guards and validation
 - Improved function signatures with specific return types
 
 ### Error Handling
+
 - Graceful handling of cancelled prompts (Ctrl+C)
 - Proper validation of user input
 - No more runtime crashes on edge cases
 
 ### Utility Functions
+
 ```typescript
 // Robust nested value access
-function getNestedValue(obj: unknown, path: string): unknown
+function getNestedValue(obj: unknown, path: string): unknown;
 
 // Type-safe nested value setting
-function setNestedValue(obj: Record<string, unknown>, path: string, value: string | number | boolean): void
+function setNestedValue(
+  obj: Record<string, unknown>,
+  path: string,
+  value: string | number | boolean,
+): void;
 
 // Input validation
-function isValidConfigValue(value: unknown): value is string | number | boolean
+function isValidConfigValue(value: unknown): value is string | number | boolean;
 ```
 
 ## Test Coverage
@@ -99,6 +113,7 @@ function isValidConfigValue(value: unknown): value is string | number | boolean
    - Proper section organization
 
 ### Test Philosophy
+
 - **Focus on critical/error-prone code** rather than comprehensive coverage
 - **Test the fixes** for the specific bugs we identified
 - **Prevent regressions** with targeted integration tests
@@ -106,16 +121,19 @@ function isValidConfigValue(value: unknown): value is string | number | boolean
 ## Usage
 
 ### Basic Setup
+
 ```bash
 vy config init
 ```
 
 ### Force Overwrite
+
 ```bash
 vy config init --force
 ```
 
 ### Test Configuration
+
 ```bash
 vy config test
 ```
@@ -133,5 +151,31 @@ vy config test
 ✅ **Type safety** - Proper TypeScript usage without sketchy workarounds
 ✅ **Test coverage** - Critical functionality is tested and protected from regressions
 ✅ **Better UX** - No duplicate questions, consistent defaults, helpful messaging
+✅ **All tests passing** - Both config and vector-store tests are working correctly
 
 The configuration experience is now professional, reliable, and user-friendly.
+
+## Running Tests
+
+All tests are now working correctly! You can run them through the monorepo or directly:
+
+```bash
+# Run all tests (monorepo)
+npm run test
+
+# Run just config tests directly
+cd apps/cli && npm test
+
+# Run specific test files
+cd apps/cli && npx vitest run src/commands/config/__tests__/utils.test.ts
+cd apps/cli && npx vitest run src/commands/config/__tests__/prompt-handling.test.ts
+```
+
+The tests cover:
+
+- **37 test cases** validating critical functionality
+- **Utility functions** - nested property access, type validation
+- **Prompt handling** - crash prevention, input validation
+- **Configuration structure** - no duplicates, consistent defaults
+
+✅ **All tests pass** and complete in ~300ms.

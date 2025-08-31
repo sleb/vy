@@ -15,7 +15,7 @@
     "dev": "tsup src/index.ts --dts --format esm --watch",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "test": "vitest"
+    "test": "vitest run"
   },
   "dependencies": {
     "chromadb": "^1.8.1",

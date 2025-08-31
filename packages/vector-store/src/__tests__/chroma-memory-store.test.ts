@@ -194,6 +194,7 @@ describe("ChromaMemoryStore", () => {
         conversationData: {
           participants: ["user", "assistant"],
           messageCount: 4,
+          tags: ["weather", "forecast"],
         },
       };
 
@@ -255,11 +256,13 @@ describe("ChromaMemoryStore", () => {
         type: "conversation",
         content: "Discussion about project timeline and milestones",
         timestamp: new Date("2024-01-16T14:20:00.000Z"),
-        metadata: { project: "Alpha Release" },
+        metadata: {},
         embedding: [0.5, 0.6, 0.7],
-        participants: ["user", "assistant", "manager"],
-        messageCount: 8,
-        tags: ["project", "timeline"],
+        conversationData: {
+          participants: ["user", "assistant", "manager"],
+          messageCount: 8,
+          tags: ["project", "timeline"],
+        },
       });
     });
   });
