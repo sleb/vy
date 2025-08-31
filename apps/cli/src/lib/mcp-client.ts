@@ -7,7 +7,6 @@
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { spawn, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -37,9 +36,9 @@ const DEFAULT_CONFIG: Required<McpClientConfig> = {
  * MCP Client wrapper for CLI usage
  */
 export class VyMcpClient {
-  private client: Client;
-  private transport: StdioClientTransport;
-  private serverProcess: ChildProcess | null = null;
+  private client!: Client;
+  private transport!: StdioClientTransport;
+
   private connected = false;
   private config: Required<McpClientConfig>;
 
@@ -56,31 +55,19 @@ export class VyMcpClient {
     }
 
     try {
-      // Spawn the MCP server process
-      this.serverProcess = spawn("node", [this.config.serverPath], {
-        stdio: ["pipe", "pipe", "inherit"],
+      // Create transport - this will handle spawning the server process
+      this.transport = new StdioClientTransport({
+        command: "node",
+        args: [this.config.serverPath],
         env: {
-          ...process.env,
+          ...(Object.fromEntries(
+            Object.entries(process.env).filter(
+              ([, value]) => value !== undefined,
+            ),
+          ) as Record<string, string>),
           ...this.config.env,
         },
       });
-
-      // Handle server process errors
-      this.serverProcess.on("error", (error: Error) => {
-        throw new Error(`Failed to start MCP server: ${error.message}`);
-      });
-
-      this.serverProcess.on("exit", (code: number) => {
-        if (code !== 0) {
-          throw new Error(`MCP server exited with code ${code}`);
-        }
-      });
-
-      // Create transport using the server's stdio
-      this.transport = new StdioClientTransport(
-        this.serverProcess.stdout,
-        this.serverProcess.stdin,
-      );
 
       // Create MCP client
       this.client = new Client(
@@ -106,7 +93,10 @@ export class VyMcpClient {
   /**
    * Call a tool on the MCP server
    */
-  async callTool(name: string, arguments_: unknown): Promise<unknown> {
+  async callTool(
+    name: string,
+    arguments_: Record<string, unknown> | undefined = undefined,
+  ): Promise<unknown> {
     if (!this.connected) {
       await this.connect();
     }
@@ -194,29 +184,9 @@ export class VyMcpClient {
         await this.client.close();
       }
 
-      // Close the transport
+      // Close the transport - this will also handle process cleanup
       if (this.transport) {
         await this.transport.close();
-      }
-
-      // Terminate the server process
-      if (this.serverProcess) {
-        this.serverProcess.kill("SIGTERM");
-
-        // Wait for graceful shutdown, then force kill if needed
-        await new Promise<void>((resolve) => {
-          const timeout = setTimeout(() => {
-            if (this.serverProcess && !this.serverProcess.killed) {
-              this.serverProcess.kill("SIGKILL");
-            }
-            resolve();
-          }, 5000);
-
-          this.serverProcess.on("exit", () => {
-            clearTimeout(timeout);
-            resolve();
-          });
-        });
       }
     } catch (error) {
       // Log cleanup errors but don't throw
