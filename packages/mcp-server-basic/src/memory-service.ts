@@ -85,13 +85,13 @@ export class MemoryService {
 
       const conversationMemory: ConversationMemory = {
         id: memoryId,
-        type: 'conversation' as const,
+        type: "conversation" as const,
         content: args.conversation,
         timestamp,
         metadata: {
           // Core metadata
-          source: 'mcp_server',
-          version: '1.0',
+          source: "mcp_server",
+          version: "1.0",
           captured_at: timestamp.toISOString(),
 
           // User-provided metadata
@@ -99,7 +99,7 @@ export class MemoryService {
         },
 
         // ConversationMemory specific fields
-        participants: args.participants || ['user'],
+        participants: args.participants || ["user"],
         messageCount: this.estimateMessageCount(args.conversation),
         summary: args.summary,
         tags: args.tags || [],
@@ -136,7 +136,6 @@ export class MemoryService {
         extractedInsights: insights,
         actionItems,
       };
-
     } catch (error) {
       const processingTime = Date.now() - startTime;
 
@@ -155,7 +154,7 @@ export class MemoryService {
         { args, processingTime },
       );
     }
-  }  /**
+  } /**
    * Search semantic memory for relevant content
    * Phase 2: Enhanced search with context-aware features
    */
@@ -190,7 +189,9 @@ export class MemoryService {
       // Add time range filter if specified
       if (args.timeRange) {
         searchQuery.timeRange = {
-          start: args.timeRange.start ? new Date(args.timeRange.start) : undefined,
+          start: args.timeRange.start
+            ? new Date(args.timeRange.start)
+            : undefined,
           end: args.timeRange.end ? new Date(args.timeRange.end) : undefined,
         };
       }
@@ -209,23 +210,38 @@ export class MemoryService {
 
       return {
         success: true,
-        results: searchResults.map(result => ({
+        results: searchResults.map((result) => ({
           id: result.id,
-          content: typeof result.content === 'string' ? result.content : (result.content as any)?.content || '',
+          content:
+            typeof result.content === "string"
+              ? result.content
+              : ((result.content as unknown as Record<string, unknown>)
+                  ?.content as string) || "",
           relevanceScore: result.relevanceScore,
-          timestamp: typeof result.content === 'object' && result.content && 'timestamp' in result.content
-            ? (result.content as any).timestamp
-            : new Date().toISOString(),
-          type: typeof result.content === 'object' && result.content && 'type' in result.content
-            ? (result.content as any).type
-            : 'unknown',
+          timestamp:
+            typeof result.content === "object" &&
+            result.content &&
+            "timestamp" in result.content
+              ? ((result.content as unknown as Record<string, unknown>)
+                  .timestamp as string)
+              : new Date().toISOString(),
+          type:
+            typeof result.content === "object" &&
+            result.content &&
+            "type" in result.content
+              ? ((result.content as unknown as Record<string, unknown>)
+                  .type as string)
+              : "unknown",
           snippet: this.generateSnippet(
-            typeof result.content === 'string' ? result.content : (result.content as any)?.content || '',
-            args.query
-          )
+            typeof result.content === "string"
+              ? result.content
+              : ((result.content as unknown as Record<string, unknown>)
+                  ?.content as string) || "",
+            args.query,
+          ),
         })),
         totalCount: searchResults.length,
-        searchTime
+        searchTime,
       };
     } catch (error) {
       this.logger.error(
@@ -257,7 +273,6 @@ export class MemoryService {
 
     try {
       const maxMemories = args.maxMemories || 5;
-      const memories: any[] = [];
       let searchQuery: SearchQuery;
 
       if (args.currentQuery) {
@@ -268,32 +283,49 @@ export class MemoryService {
           minRelevanceScore: 0.6, // Lower threshold for context
         };
       } else {
-        // Get recent memories if no query provided
+        // Get recent memories when no specific query
         searchQuery = {
           limit: maxMemories,
+          minRelevanceScore: 0.3, // Very low threshold for recent memories
         };
       }
 
-      // Execute search
+      // Phase 2: Execute the search
+      this.logger.debug({ searchQuery }, "Executing context search");
       const searchResults = await this.store.searchMemories(searchQuery);
 
       // Convert results to context format
-      const contextMemories = searchResults.map(result => ({
-        content: typeof result.content === 'string' ? result.content : (result.content as any)?.content || '',
+      const contextMemories = searchResults.map((result) => ({
+        content:
+          typeof result.content === "string"
+            ? result.content
+            : ((result.content as unknown as Record<string, unknown>)
+                ?.content as string) || "",
         relevanceScore: result.relevanceScore,
-        timestamp: typeof result.content === 'object' && result.content && 'timestamp' in result.content
-          ? (result.content as any).timestamp
-          : new Date().toISOString(),
-        type: typeof result.content === 'object' && result.content && 'type' in result.content
-          ? (result.content as any).type
-          : 'unknown',
+        timestamp:
+          typeof result.content === "object" &&
+          result.content &&
+          "timestamp" in result.content
+            ? ((result.content as unknown as Record<string, unknown>)
+                .timestamp as string)
+            : new Date().toISOString(),
+        type:
+          typeof result.content === "object" &&
+          result.content &&
+          "type" in result.content
+            ? ((result.content as unknown as Record<string, unknown>)
+                .type as string)
+            : "unknown",
       }));
 
       // Phase 2 enhancement: Estimate token usage
       const estimatedTokens = this.estimateTokens(contextMemories);
 
       // Generate selection reasoning
-      const selectionReason = this.generateSelectionReason(args, contextMemories.length);
+      const selectionReason = this.generateSelectionReason(
+        args,
+        contextMemories.length,
+      );
 
       this.logger.info(
         {
@@ -307,7 +339,7 @@ export class MemoryService {
         success: true,
         memories: contextMemories,
         estimatedTokens,
-        selectionReason
+        selectionReason,
       };
     } catch (error) {
       this.logger.error(
@@ -354,18 +386,20 @@ export class MemoryService {
    */
   private estimateMessageCount(conversation: string): number {
     // Count potential message boundaries
-    const lines = conversation.split('\n').filter(line => line.trim().length > 0);
+    const lines = conversation
+      .split("\n")
+      .filter((line) => line.trim().length > 0);
     const messageIndicators = [
       /^(user|assistant|system|human|ai):/i,
       /^[A-Z][a-z]+:/,
       /^\d+\./,
       /^-/,
-      /^>/
+      /^>/,
     ];
 
     let messageCount = 0;
     for (const line of lines) {
-      if (messageIndicators.some(pattern => pattern.test(line.trim()))) {
+      if (messageIndicators.some((pattern) => pattern.test(line.trim()))) {
         messageCount++;
       }
     }
@@ -384,18 +418,30 @@ export class MemoryService {
 
     // Pattern-based insight extraction
     const patterns = [
-      { pattern: /learn(ed|ing|s)\s+(?:that\s+)?(.{10,100})/gi, type: 'learning' },
-      { pattern: /understand(?:s)?\s+(?:that\s+)?(.{10,100})/gi, type: 'understanding' },
-      { pattern: /realize[ds]?\s+(?:that\s+)?(.{10,100})/gi, type: 'realization' },
-      { pattern: /prefer(?:s)?\s+(.{5,50})/gi, type: 'preference' },
-      { pattern: /goal(?:s)?\s+(?:is|are|include[s]?)\s+(.{10,100})/gi, type: 'goal' },
+      {
+        pattern: /learn(ed|ing|s)\s+(?:that\s+)?(.{10,100})/gi,
+        type: "learning",
+      },
+      {
+        pattern: /understand(?:s)?\s+(?:that\s+)?(.{10,100})/gi,
+        type: "understanding",
+      },
+      {
+        pattern: /realize[ds]?\s+(?:that\s+)?(.{10,100})/gi,
+        type: "realization",
+      },
+      { pattern: /prefer(?:s)?\s+(.{5,50})/gi, type: "preference" },
+      {
+        pattern: /goal(?:s)?\s+(?:is|are|include[s]?)\s+(.{10,100})/gi,
+        type: "goal",
+      },
     ];
 
     for (const { pattern, type } of patterns) {
       const matches = [...text.matchAll(pattern)];
       for (const match of matches) {
         if (match[1] || match[2]) {
-          const insight = (match[2] || match[1] || '').trim();
+          const insight = (match[2] || match[1] || "").trim();
           if (insight.length > 10) {
             insights.push(`${type}: ${insight}`);
           }
@@ -413,7 +459,7 @@ export class MemoryService {
    */
   private extractActionItems(conversation: string): string[] {
     const actionItems: string[] = [];
-    const lines = conversation.split('\n');
+    const lines = conversation.split("\n");
 
     const actionPatterns = [
       /(?:need to|should|will|must|have to|going to)\s+(.{5,100})/gi,
@@ -427,7 +473,7 @@ export class MemoryService {
         const matches = [...line.matchAll(pattern)];
         for (const match of matches) {
           if (match[1]) {
-            const action = match[1].trim().replace(/[.!?]+$/, '');
+            const action = match[1].trim().replace(/[.!?]+$/, "");
             if (action.length > 5 && action.length < 100) {
               actionItems.push(action);
             }
@@ -444,12 +490,14 @@ export class MemoryService {
    * Estimate token count for context memories
    * Phase 2 feature: Simple token estimation
    */
-  private estimateTokens(memories: any[]): number {
+  private estimateTokens(
+    memories: Array<{ content: string; [key: string]: unknown }>,
+  ): number {
     let totalTokens = 0;
 
     for (const memory of memories) {
       // Simple heuristic: ~4 characters per token on average
-      const contentLength = (memory.content || '').length;
+      const contentLength = (memory.content || "").length;
       const metadataLength = JSON.stringify(memory).length - contentLength;
       totalTokens += Math.ceil((contentLength + metadataLength) / 4);
     }
@@ -461,13 +509,18 @@ export class MemoryService {
    * Generate selection reasoning for context retrieval
    * Phase 2 feature: Explain why certain memories were selected
    */
-  private generateSelectionReason(args: GetContextArgs, selectedCount: number): string {
+  private generateSelectionReason(
+    args: GetContextArgs,
+    selectedCount: number,
+  ): string {
     const reasons: string[] = [];
 
     if (args.currentQuery) {
-      reasons.push(`searched for memories matching "${args.currentQuery.substring(0, 50)}"`);
+      reasons.push(
+        `searched for memories matching "${args.currentQuery.substring(0, 50)}"`,
+      );
     } else {
-      reasons.push('selected most recent memories');
+      reasons.push("selected most recent memories");
     }
 
     if (args.maxMemories && selectedCount >= args.maxMemories) {
@@ -475,10 +528,10 @@ export class MemoryService {
     }
 
     if (selectedCount === 0) {
-      return 'No relevant memories found matching the criteria';
+      return "No relevant memories found matching the criteria";
     }
 
-    return `Selected ${selectedCount} memories by ${reasons.join(' and ')}.`;
+    return `Selected ${selectedCount} memories by ${reasons.join(" and ")}.`;
   }
 
   /**

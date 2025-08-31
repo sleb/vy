@@ -12,6 +12,11 @@ import type {
 } from "../config.js";
 
 /**
+ * ChromaDB external library types - using any for external library interface
+ * This is acceptable for third-party library boundaries where types may change
+ */
+
+/**
  * ChromaDB collection interface
  */
 export interface ChromaCollection {
@@ -45,6 +50,7 @@ export interface ChromaQueryResult {
  */
 export class ChromaClient {
   private readonly config: ChromaConfig;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ChromaDB client external library interface
   private client: any = null;
   private connected = false;
 
@@ -67,9 +73,10 @@ export class ChromaClient {
       // Determine if this is hosted or local config
       const isHosted = "apiKey" in this.config && "ssl" in this.config;
 
-      const clientOptions = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ChromaDB constructor options vary by version
+      const clientOptions: any = {
         path: `${isHosted ? "https" : "http"}://${this.config.host}:${this.config.port}`,
-      } as any;
+      };
 
       if (isHosted && "apiKey" in this.config) {
         clientOptions.auth = {
@@ -113,6 +120,7 @@ export class ChromaClient {
     metadata?: Record<string, unknown>,
   ): Promise<ChromaCollection> {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ChromaDB collection options interface
       const options: any = { name };
       if (metadata && Object.keys(metadata).length > 0) {
         options.metadata = metadata;
@@ -138,6 +146,7 @@ export class ChromaClient {
     metadata?: Record<string, unknown>,
   ): Promise<ChromaCollection> {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ChromaDB collection options interface
       const options: any = { name };
       if (metadata && Object.keys(metadata).length > 0) {
         options.metadata = metadata;
@@ -172,6 +181,7 @@ export class ChromaClient {
   async listCollections(): Promise<ChromaCollection[]> {
     try {
       const collections = await this.getClient().listCollections();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ChromaDB collection type from external library
       return collections.map((col: any) => ({
         name: col.name,
         id: col.id,
@@ -201,6 +211,7 @@ export class ChromaClient {
       await collection.add({
         ids: documents.map((doc) => doc.id),
         embeddings: documents.map((doc) => doc.embedding),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ChromaDB metadata type compatibility
         metadatas: documents.map((doc) => doc.metadata as any),
         documents: documents.map((doc) => doc.document),
       });
@@ -230,6 +241,7 @@ export class ChromaClient {
       await collection.update({
         ids: documents.map((doc) => doc.id),
         embeddings: documents.map((doc) => doc.embedding),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ChromaDB metadata type compatibility
         metadatas: documents.map((doc) => doc.metadata as any),
         documents: documents.map((doc) => doc.document),
       });
@@ -370,6 +382,7 @@ export class ChromaClient {
   /**
    * Get connected client (with null check)
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Returns ChromaDB client instance
   private getClient(): any {
     this.ensureConnected();
     if (!this.client) {
