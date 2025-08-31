@@ -81,7 +81,7 @@ export class ChromaClient {
       this.client = new ChromaClient(clientOptions);
 
       // Test connection
-      await this.getClient().heartbeat();
+      await this.client.heartbeat();
 
       this.connected = true;
     } catch (error) {
@@ -113,10 +113,12 @@ export class ChromaClient {
     metadata?: Record<string, unknown>,
   ): Promise<ChromaCollection> {
     try {
-      const collection = await this.getClient().createCollection({
-        name,
-        metadata: metadata || {},
-      });
+      const options: any = { name };
+      if (metadata && Object.keys(metadata).length > 0) {
+        options.metadata = metadata;
+      }
+
+      const collection = await this.getClient().createCollection(options);
 
       return {
         name: collection.name,
@@ -136,10 +138,12 @@ export class ChromaClient {
     metadata?: Record<string, unknown>,
   ): Promise<ChromaCollection> {
     try {
-      const collection = await this.getClient().getOrCreateCollection({
-        name,
-        metadata: metadata || {},
-      });
+      const options: any = { name };
+      if (metadata && Object.keys(metadata).length > 0) {
+        options.metadata = metadata;
+      }
+
+      const collection = await this.getClient().getOrCreateCollection(options);
 
       return {
         name: collection.name,

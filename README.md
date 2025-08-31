@@ -35,12 +35,12 @@ Think of it as a combination of:
 vy/
 ├── packages/
 │   ├── core/                    # Shared types, utilities, and interfaces
-│   ├── mcp-server-basic/        # MVP MCP server implementation
+│   ├── mcp-server-basic/        # Production MCP server implementation
 │   ├── vector-store/            # ChromaDB abstraction layer
 │   ├── eslint-config/           # Shared ESLint configuration
 │   └── typescript-config/       # Shared TypeScript configuration
 ├── apps/
-│   └── cli-test/               # CLI testing and development tool
+│   └── cli/                    # Complete CLI application for testing & management
 ├── docs/
 │   ├── architecture/           # Architecture decision records (ADRs)
 │   ├── api/                   # API documentation
@@ -52,7 +52,7 @@ vy/
 
 ## 🚀 Implementation Phases
 
-### Phase 1: MVP Foundation (Current Phase) 🔄 In Progress
+### Phase 1: MVP Foundation ✅ **COMPLETE**
 
 **Goal**: Basic semantic memory with MCP integration
 
@@ -78,10 +78,40 @@ vy/
 - ✅ Core types and interfaces (`packages/core`)
 - ✅ ChromaDB abstraction layer (`packages/vector-store`)
 - ✅ Basic MCP server (`packages/mcp-server-basic`)
-- ⏳ CLI testing tool (`apps/cli-test`)
-- ⏳ Basic documentation and setup guides
+- ✅ CLI testing tool (`apps/cli`)
+- ✅ Basic documentation and setup guides
 
-### Phase 2: Enhanced Memory Intelligence 📋 Planned
+### Phase 1.5: CLI Testing Application ✅ **COMPLETE**
+
+**Goal**: Validate MCP server with comprehensive testing interface
+
+**Core Features**:
+
+- Complete CLI application with beautiful UI
+- Configuration management and validation
+- Server health monitoring and status checks
+- End-to-end integration testing
+- ChromaDB connection testing
+- Environment setup and validation
+
+**Key Achievements**:
+
+- **Fixed ChromaDB Integration**: Resolved connection and metadata validation bugs
+- **Complete CLI Interface**: All commands implemented with proper error handling
+- **Configuration System**: Environment variables, validation, and testing
+- **Integration Framework**: Server startup, health checks, and monitoring
+- **Bug Fixes**: MCP server bundling and ChromaDB client issues resolved
+
+**Deliverables**:
+
+- ✅ Complete CLI application (`apps/cli`)
+- ✅ Configuration management commands
+- ✅ Server management and monitoring
+- ✅ Integration testing framework
+- ✅ ChromaDB connection fixes
+- ✅ Environment validation system
+
+### Phase 2: Enhanced Memory Intelligence 🎯 **CURRENT FOCUS**
 
 **Goal**: Implement the full two-layer architecture
 
@@ -143,11 +173,15 @@ cp .env.example .env
 # Start ChromaDB (local development)
 docker run -p 8000:8000 chromadb/chroma
 
-# Run development mode for all packages
-turbo dev
-
 # Build all packages
 turbo build
+
+# Test the CLI and server
+node apps/cli/dist/cli.js config show
+node apps/cli/dist/cli.js server start
+
+# Start using your semantic memory!
+node apps/cli/dist/cli.js mem capture "Your first memory"
 
 # Run tests
 turbo test
@@ -186,6 +220,42 @@ npm run test                    # All packages
 turbo test --filter=vector-store # Specific package
 cd packages/vector-store && npm run test # Direct test execution
 ```
+
+### Using the Vy CLI
+
+The Vy CLI provides a complete interface for managing your semantic memory system:
+
+```bash
+# Build the CLI (after initial setup)
+npm run build
+
+# Basic memory operations
+node apps/cli/dist/cli.js mem capture "Your conversation or thought here"
+node apps/cli/dist/cli.js mem search "query terms"
+node apps/cli/dist/cli.js mem context --query "current situation"
+
+# Configuration management
+node apps/cli/dist/cli.js config show
+node apps/cli/dist/cli.js config test --chromadb
+node apps/cli/dist/cli.js config init
+
+# Server management
+node apps/cli/dist/cli.js server start
+node apps/cli/dist/cli.js server status
+node apps/cli/dist/cli.js server health
+
+# Development utilities
+node apps/cli/dist/cli.js dev benchmark
+node apps/cli/dist/cli.js dev debug --chromadb
+```
+
+**CLI Features**:
+- 🎨 Beautiful interface with colors, spinners, and tables
+- ⚙️ Complete configuration management and validation
+- 🔧 Server health monitoring and debugging tools
+- 📊 Connection testing for ChromaDB and OpenAI
+- 🛡️ Robust error handling with verbose mode
+- 💾 Memory operations with metadata support
 
 ## 🧠 Core Concepts & Design Decisions
 
@@ -276,7 +346,7 @@ This project demonstrates:
 
 ## 📈 Current Status
 
-**Phase 1 Progress** (MVP Foundation): ✅ **COMPLETE**
+**Phase 1 (MVP Foundation)**: ✅ **COMPLETE**
 
 - ✅ Turborepo monorepo setup with shared configs
 - ✅ Core domain types and interfaces (`@repo/core`)
@@ -288,11 +358,28 @@ This project demonstrates:
 - ✅ Complete MCP server implementation with tool registration
 - ✅ Server initialization and dependency injection
 - ✅ MCP transport integration and lifecycle management
-- ⏳ CLI testing application (Phase 1.5)
-- ⏳ Tool business logic implementation (Phase 2)
-- ⏳ Integration test suites with Docker (Phase 2)
 
-**Phase 1 Key Accomplishments**:
+**Phase 1.5 (CLI Testing Application)**: ✅ **COMPLETE**
+
+- ✅ Complete CLI application with beautiful UI and error handling
+- ✅ All command implementations: `mem`, `server`, `config`, `dev`
+- ✅ Configuration management with validation and testing
+- ✅ ChromaDB connection bugs fixed (circular dependency & metadata validation)
+- ✅ MCP server bundling issues resolved
+- ✅ End-to-end integration testing framework
+- ✅ Environment variable configuration system
+- ✅ Server health checks and status monitoring
+
+**Phase 2 (Enhanced Memory Intelligence)**: 🎯 **CURRENT FOCUS**
+
+- ⏳ Tool business logic implementation
+- ⏳ AI-powered insight extraction from conversations
+- ⏳ Memory condensation and intelligent summarization
+- ⏳ Enhanced search with relevance ranking and recency weighting
+- ⏳ Memory categorization and domain classification
+- ⏳ Integration test suites with Docker
+
+**Phase 1 & 1.5 Key Accomplishments**:
 
 - **🏗️ Production-Ready MCP Server**: Complete tool registration, request routing, and lifecycle management
 - **🎯 Clean Architecture**: Service layer pattern with proper dependency injection
@@ -305,8 +392,25 @@ This project demonstrates:
 - **🔍 Semantic Search Logic**: Distance-to-similarity conversion with relevance filtering
 - **🧪 Comprehensive Testing**: Unit tests covering critical failure scenarios
 - **⚡ Modern TypeScript Patterns**: Discriminated unions, factory functions, service orchestration
+- **🖥️ Complete CLI Application**: Beautiful interface with configuration management and health monitoring
+- **🔧 Robust Infrastructure**: ChromaDB integration with connection management and error recovery
 
-**Next Steps**: Moving to Phase 1.5 (CLI Testing App) to validate the MCP server before implementing tool business logic in Phase 2.
+**Current Status**: All foundational components are complete and tested. Ready to implement enhanced intelligence features in Phase 2.
+
+### 🔥 Recent Updates (August 2025)
+
+**Phase 1.5 Completion - Major Infrastructure Fixes**:
+
+- **🔧 ChromaDB Integration Fixed**: Resolved critical circular dependency bug in `ChromaClient.connect()` that prevented server startup
+- **📦 MCP Server Bundling Fixed**: Resolved bundling issues with external dependencies (pino, chromadb) causing runtime import errors
+- **🏗️ Complete CLI Application**: Built comprehensive command-line interface with beautiful UI, configuration management, and health monitoring
+- **⚙️ Configuration System**: Added robust environment variable management with validation and testing
+- **🧪 Integration Testing**: Implemented end-to-end testing framework with server health checks
+- **🛡️ Error Handling**: Enhanced error handling and recovery throughout the system
+- **📊 Observability**: Added structured logging and performance monitoring
+- **🚀 Production Ready**: Server now starts successfully and connects to ChromaDB without issues
+
+**Next Focus**: Moving to Phase 2 to implement enhanced memory intelligence and AI-powered insight extraction.
 
 ## 🔗 Key Dependencies
 
@@ -320,6 +424,13 @@ This project demonstrates:
 - **vitest**: Modern testing framework with comprehensive unit tests
 - **eslint**: Code linting with modern flat config
 - **prettier**: Code formatting
+
+**CLI Dependencies**:
+- **commander**: Command-line interface framework
+- **chalk**: Terminal colors and styling
+- **ora**: Beautiful terminal spinners
+- **prompts**: Interactive command line prompts
+- **table**: ASCII table formatting
 
 ## 📄 License
 
