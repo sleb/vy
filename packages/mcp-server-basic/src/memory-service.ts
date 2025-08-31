@@ -8,13 +8,14 @@
 import type {
   CaptureConversationArgs,
   CaptureConversationResult,
-  ConversationMemory,
   GetContextArgs,
   GetContextResult,
+  Memory,
   MemoryType,
   SearchMemoryArgs,
   SearchMemoryResult,
   SearchQuery,
+  SearchResult,
 } from "@repo/core";
 import type { ChromaMemoryStore } from "@repo/vector-store";
 import { v7 as uuidv7 } from "uuid";
@@ -83,7 +84,7 @@ export class MemoryService {
       const memoryId = this.generateMemoryId();
       const timestamp = new Date();
 
-      const conversationMemory: ConversationMemory = {
+      const conversationMemory: Memory = {
         id: memoryId,
         type: "conversation" as const,
         content: args.conversation,
@@ -98,11 +99,13 @@ export class MemoryService {
           ...args.metadata,
         },
 
-        // ConversationMemory specific fields
-        participants: args.participants || ["user"],
-        messageCount: this.estimateMessageCount(args.conversation),
-        summary: args.summary,
-        tags: args.tags || [],
+        // Conversation-specific data using composition
+        conversationData: {
+          participants: args.participants || ["user"],
+          messageCount: this.estimateMessageCount(args.conversation),
+          summary: args.summary,
+          tags: args.tags || [],
+        },
       };
 
       // Step 3: Store the memory
@@ -119,7 +122,7 @@ export class MemoryService {
         {
           memoryId,
           conversationLength: args.conversation.length,
-          messageCount: conversationMemory.messageCount,
+          messageCount: conversationMemory.conversationData?.messageCount || 0,
           insightsExtracted: insights.length,
           actionItemsExtracted: actionItems.length,
           processingTime,
@@ -131,7 +134,7 @@ export class MemoryService {
       return {
         success: true,
         memoryId,
-        message: `Conversation captured successfully with ${conversationMemory.messageCount} estimated messages`,
+        message: `Conversation captured successfully with ${conversationMemory.conversationData?.messageCount || 0} estimated messages`,
         // Phase 2 intelligence features
         extractedInsights: insights,
         actionItems,
@@ -197,7 +200,8 @@ export class MemoryService {
       }
 
       // Execute search using ChromaMemoryStore
-      const searchResults = await this.store.searchMemories(searchQuery);
+      const searchResults: SearchResult<Memory>[] =
+        await this.store.searchMemories(searchQuery);
       const searchTime = Date.now() - startTime;
 
       this.logger.info(
@@ -212,33 +216,11 @@ export class MemoryService {
         success: true,
         results: searchResults.map((result) => ({
           id: result.id,
-          content:
-            typeof result.content === "string"
-              ? result.content
-              : ((result.content as unknown as Record<string, unknown>)
-                  ?.content as string) || "",
+          content: result.content.content,
           relevanceScore: result.relevanceScore,
-          timestamp:
-            typeof result.content === "object" &&
-            result.content &&
-            "timestamp" in result.content
-              ? ((result.content as unknown as Record<string, unknown>)
-                  .timestamp as string)
-              : new Date().toISOString(),
-          type:
-            typeof result.content === "object" &&
-            result.content &&
-            "type" in result.content
-              ? ((result.content as unknown as Record<string, unknown>)
-                  .type as string)
-              : "unknown",
-          snippet: this.generateSnippet(
-            typeof result.content === "string"
-              ? result.content
-              : ((result.content as unknown as Record<string, unknown>)
-                  ?.content as string) || "",
-            args.query,
-          ),
+          timestamp: result.content.timestamp.toISOString(),
+          type: result.content.type,
+          snippet: this.generateSnippet(result.content.content, args.query),
         })),
         totalCount: searchResults.length,
         searchTime,
@@ -292,30 +274,15 @@ export class MemoryService {
 
       // Phase 2: Execute the search
       this.logger.debug({ searchQuery }, "Executing context search");
-      const searchResults = await this.store.searchMemories(searchQuery);
+      const searchResults: SearchResult<Memory>[] =
+        await this.store.searchMemories(searchQuery);
 
       // Convert results to context format
       const contextMemories = searchResults.map((result) => ({
-        content:
-          typeof result.content === "string"
-            ? result.content
-            : ((result.content as unknown as Record<string, unknown>)
-                ?.content as string) || "",
+        content: result.content.content,
         relevanceScore: result.relevanceScore,
-        timestamp:
-          typeof result.content === "object" &&
-          result.content &&
-          "timestamp" in result.content
-            ? ((result.content as unknown as Record<string, unknown>)
-                .timestamp as string)
-            : new Date().toISOString(),
-        type:
-          typeof result.content === "object" &&
-          result.content &&
-          "type" in result.content
-            ? ((result.content as unknown as Record<string, unknown>)
-                .type as string)
-            : "unknown",
+        timestamp: result.content.timestamp.toISOString(),
+        type: result.content.type,
       }));
 
       // Phase 2 enhancement: Estimate token usage

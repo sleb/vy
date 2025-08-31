@@ -20,6 +20,18 @@ import { homedir } from "os";
 import { dirname, join } from "path";
 
 /**
+ * Type guard to check if error is a NodeJS.ErrnoException
+ */
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as NodeJS.ErrnoException).code === "string"
+  );
+}
+
+/**
  * Configuration file paths
  */
 export const CONFIG_PATHS = {
@@ -153,7 +165,7 @@ export class ConfigFileManager {
         size: stats.size,
       };
     } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (isNodeError(error) && error.code === "ENOENT") {
         return {
           path: this.userConfigPath,
           exists: false,
@@ -206,10 +218,10 @@ export class ConfigFileManager {
     try {
       await fs.unlink(this.userConfigPath);
     } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (isNodeError(error) && error.code !== "ENOENT") {
         throw error;
       }
-      // Ignore if file doesn't exist
+      // Ignore if file doesn't exist - ENOENT means file already doesn't exist
     }
   }
 
@@ -221,11 +233,11 @@ export class ConfigFileManager {
       const configData = await fs.readFile(this.userConfigPath, "utf8");
       return JSON.parse(configData);
     } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      if (isNodeError(error) && error.code === "ENOENT") {
         return null; // File doesn't exist
       }
       throw new Error(
-        `Failed to load config file: ${(error as Error).message}`,
+        `Failed to load config file: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

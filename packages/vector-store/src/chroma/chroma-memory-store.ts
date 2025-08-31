@@ -6,9 +6,12 @@
  */
 
 import type {
+  ActionItemData,
   BatchOperationResult,
-  ConversationMemory,
   EmbeddingService,
+  FactData,
+  InsightData,
+  LearningData,
   Memory,
   MemoryId,
   MemoryStore,
@@ -543,11 +546,33 @@ export class ChromaMemoryStore implements MemoryStore {
         type: memory.type,
         timestamp: memory.timestamp.toISOString(),
         ...memory.metadata,
-        // Add type-specific metadata
-        ...(memory.type === "conversation" && {
-          participants: (memory as ConversationMemory).participants || [],
-          messageCount: (memory as ConversationMemory).messageCount || 0,
-          tags: (memory as ConversationMemory).tags || [],
+        // Add type-specific metadata using composition
+        ...(memory.conversationData && {
+          participants: memory.conversationData.participants || [],
+          messageCount: memory.conversationData.messageCount || 0,
+          tags: memory.conversationData.tags || [],
+        }),
+        ...(memory.actionItemData && {
+          status: memory.actionItemData.status,
+          priority: memory.actionItemData.priority,
+          dueDate: memory.actionItemData.dueDate?.toISOString(),
+          assignee: memory.actionItemData.assignee,
+          project: memory.actionItemData.project,
+        }),
+        ...(memory.factData && {
+          factType: memory.factData.factType,
+          verified: memory.factData.verified,
+          lastUpdated: memory.factData.lastUpdated.toISOString(),
+        }),
+        ...(memory.insightData && {
+          category: memory.insightData.category,
+          confidence: memory.insightData.confidence,
+          sourceMemories: memory.insightData.sourceMemories,
+        }),
+        ...(memory.learningData && {
+          domain: memory.learningData.domain,
+          importance: memory.learningData.importance,
+          sourceMemories: memory.learningData.sourceMemories,
         }),
       },
     };
@@ -555,6 +580,7 @@ export class ChromaMemoryStore implements MemoryStore {
 
   /**
    * Convert ChromaDB document to Memory object
+   * Reconstructs a full memory from stored document data
    */
   private documentToMemory(document: ChromaDocument): Memory {
     const {
@@ -563,29 +589,67 @@ export class ChromaMemoryStore implements MemoryStore {
       participants,
       messageCount,
       tags,
+      status,
+      priority,
+      dueDate,
+      assignee,
+      project,
+      factType,
+      verified,
+      lastUpdated,
+      category,
+      confidence,
+      sourceMemories,
+      domain,
+      importance,
       ...restMetadata
     } = document.metadata;
 
-    const baseMemory = {
+    const memory: Memory = {
       id: document.id,
-      type: type as MemoryType,
+      type: this.validateMemoryType(type),
       content: document.document,
-      timestamp: new Date(timestamp as string),
+      timestamp: this.parseTimestamp(timestamp),
       metadata: restMetadata,
       embedding: document.embedding.length > 0 ? document.embedding : undefined,
     };
 
-    // Add type-specific fields
-    if (type === "conversation") {
-      return {
-        ...baseMemory,
-        participants: (participants as string[]) || [],
-        messageCount: (messageCount as number) || 0,
-        tags: (tags as string[]) || [],
-      } as ConversationMemory;
+    // Add type-specific data using composition
+    if (memory.type === "conversation") {
+      memory.conversationData = {
+        participants: this.parseStringArray(participants),
+        messageCount: this.parseNumber(messageCount),
+        tags: this.parseStringArray(tags),
+      };
+    } else if (memory.type === "action_item") {
+      memory.actionItemData = {
+        status: (status as ActionItemData["status"]) || "open",
+        priority: (priority as ActionItemData["priority"]) || "medium",
+        dueDate: dueDate ? this.parseTimestamp(dueDate) : undefined,
+        assignee: typeof assignee === "string" ? assignee : undefined,
+        project: typeof project === "string" ? project : undefined,
+      };
+    } else if (memory.type === "fact") {
+      memory.factData = {
+        factType: (factType as FactData["factType"]) || "other",
+        verified: typeof verified === "boolean" ? verified : false,
+        lastUpdated: this.parseTimestamp(lastUpdated) || memory.timestamp,
+      };
+    } else if (memory.type === "insight") {
+      memory.insightData = {
+        category: (category as InsightData["category"]) || "pattern",
+        confidence: typeof confidence === "number" ? confidence : 0.8,
+        sourceMemories: Array.isArray(sourceMemories) ? sourceMemories : [],
+      };
+    } else if (memory.type === "learning") {
+      memory.learningData = {
+        domain: typeof domain === "string" ? domain : "general",
+        importance: (importance as LearningData["importance"]) || "medium",
+        sourceMemories: Array.isArray(sourceMemories) ? sourceMemories : [],
+      };
     }
 
-    return baseMemory as Memory;
+    return memory;
   }
 
   /**
@@ -596,15 +660,81 @@ export class ChromaMemoryStore implements MemoryStore {
     document: string,
     metadata: Record<string, unknown>,
   ): Memory {
-    const { type, timestamp, ...restMetadata } = metadata;
+    const { type, timestamp: timestampValue, ...restMetadata } = metadata;
 
-    return {
+    const memory: Memory = {
       id,
-      type: (type as MemoryType) || "conversation",
+      type: this.validateMemoryType(type) || "conversation",
       content: document,
-      timestamp: timestamp ? new Date(timestamp as string) : new Date(),
+      timestamp: this.parseTimestamp(timestampValue) || new Date(),
       metadata: restMetadata,
-    } as Memory;
+    };
+
+    // Add type-specific data using composition if available in metadata
+    if (memory.type === "conversation") {
+      const { participants, messageCount, tags } = metadata;
+      if (participants || messageCount || tags) {
+        memory.conversationData = {
+          participants: this.parseStringArray(participants),
+          messageCount: this.parseNumber(messageCount),
+          tags: this.parseStringArray(tags),
+        };
+      }
+    }
+
+    return memory;
+  }
+
+  /**
+   * Validate and return a proper MemoryType
+   */
+  private validateMemoryType(type: unknown): MemoryType {
+    const validTypes: MemoryType[] = [
+      "conversation",
+      "insight",
+      "learning",
+      "fact",
+      "action_item",
+    ];
+    if (typeof type === "string" && validTypes.includes(type as MemoryType)) {
+      return type as MemoryType;
+    }
+    return "conversation"; // default fallback
+  }
+
+  /**
+   * Parse timestamp from unknown value
+   */
+  private parseTimestamp(timestamp: unknown): Date {
+    if (typeof timestamp === "string") {
+      const parsed = new Date(timestamp);
+      return isNaN(parsed.getTime()) ? new Date() : parsed;
+    }
+    return new Date();
+  }
+
+  /**
+   * Parse string array from unknown value
+   */
+  private parseStringArray(value: unknown): string[] {
+    if (Array.isArray(value)) {
+      return value.filter((item) => typeof item === "string");
+    }
+    return [];
+  }
+
+  /**
+   * Parse number from unknown value
+   */
+  private parseNumber(value: unknown): number {
+    if (typeof value === "number") {
+      return value;
+    }
+    if (typeof value === "string") {
+      const parsed = parseInt(value, 10);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
   }
 
   /**

@@ -270,6 +270,9 @@ export class VyMcpServer {
         throw new Error("Tool handlers not initialized");
       }
 
+      // Validate arguments before calling tools
+      this.validateToolArgs(args, toolName);
+
       let result: unknown;
       switch (toolName) {
         case "capture_conversation":
@@ -442,6 +445,33 @@ export class VyMcpServer {
           memories: vectorStore.collectionName,
         },
       });
+    }
+  }
+
+  /**
+   * Validate tool arguments based on tool name
+   */
+  private validateToolArgs(args: unknown, toolName: string): void {
+    if (!args || typeof args !== "object") {
+      throw new Error(`Invalid arguments for ${toolName}: must be an object`);
+    }
+
+    switch (toolName) {
+      case "capture_conversation":
+        if (!("conversation" in args)) {
+          throw new Error("capture_conversation requires 'conversation' field");
+        }
+        break;
+      case "search_memory":
+        if (!("query" in args)) {
+          throw new Error("search_memory requires 'query' field");
+        }
+        break;
+      case "get_context":
+        // get_context has all optional fields, so just validate it's an object
+        break;
+      default:
+        throw new Error(`Unknown tool: ${toolName}`);
     }
   }
 

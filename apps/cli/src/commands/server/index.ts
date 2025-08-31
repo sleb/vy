@@ -28,6 +28,18 @@ import { testConnection } from "../../lib/mcp-client.js";
 import { handleError, validateConfig } from "../../lib/utils.js";
 
 /**
+ * Type guard to check if error is a NodeJS.ErrnoException
+ */
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as NodeJS.ErrnoException).code === "string"
+  );
+}
+
+/**
  * Server process management
  */
 const SERVER_PID_FILE = join(homedir(), ".vy", "server.pid");
@@ -168,7 +180,7 @@ async function stop(options?: Record<string, unknown>): Promise<void> {
       clearServerPid();
       spinner.succeed(`Server stopped (PID: ${pid})`);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ESRCH") {
+      if (isNodeError(error) && error.code === "ESRCH") {
         // Process doesn't exist, clean up PID file
         clearServerPid();
         spinner.succeed("Server was not running, cleaned up PID file");

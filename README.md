@@ -250,6 +250,7 @@ node apps/cli/dist/cli.js dev debug --chromadb
 ```
 
 **CLI Features**:
+
 - 🎨 Beautiful interface with colors, spinners, and tables
 - ⚙️ Complete configuration management and validation
 - 🔧 Server health monitoring and debugging tools
@@ -275,11 +276,15 @@ node apps/cli/dist/cli.js dev debug --chromadb
 
 ### Memory Types (Extensible Design)
 
+Using a **composition-based architecture**, all memory types share a common structure with optional type-specific data:
+
 - **Conversations** (Phase 1): Complete conversation threads with metadata
 - **Insights** (Phase 2): Derived patterns and strategic learnings
 - **Learnings** (Phase 2): Specific knowledge and facts
 - **Facts** (Phase 2): Verifiable information and preferences
 - **Action Items** (Phase 2): Extracted tasks and TODOs
+
+The `Memory` interface uses composition (`conversationData?`, `actionItemData?`, etc.) rather than inheritance, allowing flexible partial objects during serialization/deserialization and eliminating complex discriminated union handling.
 
 ### Vector Storage Strategy
 
@@ -373,6 +378,7 @@ This project demonstrates:
 **Phase 2 (Enhanced Memory Intelligence)**: ✅ **COMPLETED**
 
 **Advanced Features Implemented:**
+
 - **Business Logic Layer**: Complete MCP tool implementations with enhanced intelligence
 - **AI-Powered Insight Extraction**: Pattern-based extraction of learnings, preferences, and goals
 - **Action Item Detection**: Automatic identification and extraction of tasks and TODOs
@@ -383,6 +389,7 @@ This project demonstrates:
 - **Token Management**: Accurate token estimation for budget-aware context injection
 
 **Major Implementation Highlights:**
+
 - `captureConversation`: Full conversation processing with metadata extraction and intelligence
 - `searchMemory`: Semantic search with filtering, ranking, and snippet generation
 - `getContext`: Intelligent context selection with token management and reasoning
@@ -416,6 +423,7 @@ This project demonstrates:
 ## Recent Major Accomplishments
 
 **Phase 2 Enhanced Memory Intelligence (JUST COMPLETED):**
+
 - ✅ Complete business logic implementation for all MCP tools
 - ✅ AI-powered insight extraction and action item detection
 - ✅ Context-aware search with intelligent ranking and filtering
@@ -424,6 +432,7 @@ This project demonstrates:
 - ✅ Comprehensive error handling and logging throughout
 
 **Phase 1.5 CLI Testing Application (COMPLETED):**
+
 - ✅ Complete CLI application built and tested
 - ✅ Fixed ChromaDB connection timeout issues and network configuration
 - ✅ Resolved MCP server bundling and import problems
@@ -447,6 +456,18 @@ This project demonstrates:
 
 **Next Focus**: Moving to Phase 2 to implement enhanced memory intelligence and AI-powered insight extraction.
 
+**Phase 2 Architecture Improvements - Type Safety & Composition**:
+
+- **🏗️ Memory Type Refactoring**: Replaced inheritance-based discriminated unions with flexible composition pattern for Memory types
+- **🔧 Type Cast Cleanup**: Eliminated all unsafe type assertions (`as unknown as Record<string, unknown>`) throughout codebase
+- **✅ Proper Validation**: Added comprehensive argument validation for MCP tools with meaningful error messages
+- **🛡️ Error Type Guards**: Implemented proper type guards for NodeJS error handling instead of unsafe casts
+- **📦 Configuration Safety**: Enhanced config handling with proper defaults and validation instead of risky type assertions
+- **🎯 Composition Benefits**: Memory objects now support partial data during deserialization, making the system much more flexible
+- **📏 Code Quality**: Achieved 100% lint compliance with zero type safety warnings across all packages
+
+The new composition-based approach allows `Memory` objects to have optional type-specific data (`conversationData`, `actionItemData`, etc.) making serialization/deserialization much cleaner and eliminating the need for complex discriminated union handling.
+
 ## 🔗 Key Dependencies
 
 - **@modelcontextprotocol/sdk**: MCP protocol implementation
@@ -461,6 +482,7 @@ This project demonstrates:
 - **prettier**: Code formatting
 
 **CLI Dependencies**:
+
 - **commander**: Command-line interface framework
 - **chalk**: Terminal colors and styling
 - **ora**: Beautiful terminal spinners

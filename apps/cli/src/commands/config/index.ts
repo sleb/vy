@@ -72,7 +72,9 @@ export const configCommands = {
 
       if (shouldTest) {
         console.log(); // Add spacing
-        await testConfiguration(config as VyConfig, { verbose: true });
+        // Merge with defaults to ensure we have a complete config for testing
+        const completeConfig = { ...DEFAULT_CONFIG, ...config };
+        await testConfiguration(completeConfig, { verbose: true });
       }
 
       console.log(

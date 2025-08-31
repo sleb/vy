@@ -15,26 +15,17 @@ export type Embedding = number[];
  * Different types of memories we can store
  * Start with 'conversation', expand to others in Phase 2
  */
-export type MemoryType = 'conversation' | 'insight' | 'learning' | 'fact' | 'action_item';
+export type MemoryType =
+  | "conversation"
+  | "insight"
+  | "learning"
+  | "fact"
+  | "action_item";
 
 /**
- * Base interface for all memory types
+ * Conversation-specific data
  */
-export interface BaseMemory {
-  id: MemoryId;
-  type: MemoryType;
-  content: string;
-  timestamp: Timestamp;
-  metadata: Record<string, unknown>;
-  embedding?: Embedding; // Optional for now, will be populated by vector store
-}
-
-/**
- * Conversation memory - stores full conversations
- * This is our MVP implementation target
- */
-export interface ConversationMemory extends BaseMemory {
-  type: 'conversation';
+export interface ConversationData {
   participants: string[];
   messageCount: number;
   duration?: number; // in milliseconds
@@ -43,60 +34,84 @@ export interface ConversationMemory extends BaseMemory {
 }
 
 /**
- * Insight memory - extracted learnings and patterns
- * Phase 2 implementation
+ * Insight-specific data
  */
-export interface InsightMemory extends BaseMemory {
-  type: 'insight';
-  category: 'pattern' | 'preference' | 'goal' | 'strategy' | 'relationship';
+export interface InsightData {
+  category: "pattern" | "preference" | "goal" | "strategy" | "relationship";
   confidence: number; // 0-1 score of how confident we are in this insight
   sourceMemories: MemoryId[]; // References to conversations that led to this insight
 }
 
 /**
- * Learning memory - specific facts or knowledge extracted
- * Phase 2 implementation
+ * Learning-specific data
  */
-export interface LearningMemory extends BaseMemory {
-  type: 'learning';
+export interface LearningData {
   domain: string; // e.g., 'technical', 'personal', 'project'
-  importance: 'low' | 'medium' | 'high';
+  importance: "low" | "medium" | "high";
   sourceMemories: MemoryId[];
 }
 
 /**
- * Fact memory - specific factual information
- * Phase 2 implementation
+ * Fact-specific data
  */
-export interface FactMemory extends BaseMemory {
-  type: 'fact';
-  factType: 'personal' | 'project' | 'preference' | 'contact' | 'other';
+export interface FactData {
+  factType: "personal" | "project" | "preference" | "contact" | "other";
   verified: boolean;
   lastUpdated: Timestamp;
 }
 
 /**
- * Action item memory - extracted tasks and TODOs
- * Phase 2 implementation
+ * Action item-specific data
  */
-export interface ActionItemMemory extends BaseMemory {
-  type: 'action_item';
-  status: 'open' | 'in_progress' | 'completed' | 'cancelled';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+export interface ActionItemData {
+  status: "open" | "in_progress" | "completed" | "cancelled";
+  priority: "low" | "medium" | "high" | "urgent";
   dueDate?: Timestamp;
   assignee?: string;
   project?: string;
 }
 
 /**
- * Union type for all memory types
+ * Memory using composition - flexible and extensible
+ * Type-specific data is optional, allowing partial memories during deserialization
  */
-export type Memory =
-  | ConversationMemory
-  | InsightMemory
-  | LearningMemory
-  | FactMemory
-  | ActionItemMemory;
+export interface Memory {
+  id: MemoryId;
+  type: MemoryType;
+  content: string;
+  timestamp: Timestamp;
+  metadata: Record<string, unknown>;
+  embedding?: Embedding; // Optional for now, will be populated by vector store
+
+  // Type-specific data (composition approach)
+  conversationData?: ConversationData;
+  insightData?: InsightData;
+  learningData?: LearningData;
+  factData?: FactData;
+  actionItemData?: ActionItemData;
+}
+
+/**
+ * Legacy type aliases for backward compatibility
+ * These can be gradually phased out
+ */
+export type ConversationMemory = Memory & {
+  type: "conversation";
+  conversationData: ConversationData;
+};
+export type InsightMemory = Memory & {
+  type: "insight";
+  insightData: InsightData;
+};
+export type LearningMemory = Memory & {
+  type: "learning";
+  learningData: LearningData;
+};
+export type FactMemory = Memory & { type: "fact"; factData: FactData };
+export type ActionItemMemory = Memory & {
+  type: "action_item";
+  actionItemData: ActionItemData;
+};
 
 /**
  * Individual message within a conversation
@@ -104,7 +119,7 @@ export type Memory =
  */
 export interface Message {
   id: string;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
   timestamp: Timestamp;
   metadata?: Record<string, unknown>;
