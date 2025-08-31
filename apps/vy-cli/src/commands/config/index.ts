@@ -103,8 +103,6 @@ export const configCommands = {
 
       console.log(chalk.cyan("🔧 Current Vy Configuration\n"));
 
-      const sensitiveKeys = getSensitivePaths();
-
       // Display each section
       for (const section of CONFIG_SECTIONS) {
         console.log(chalk.bold(`${section.label}:`));
@@ -495,6 +493,7 @@ function setNestedValue(obj: any, path: string, value: any): void {
 
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
+    if (!part) continue; // Skip empty parts
     if (!current[part] || typeof current[part] !== "object") {
       current[part] = {};
     }
@@ -502,7 +501,9 @@ function setNestedValue(obj: any, path: string, value: any): void {
   }
 
   const lastPart = parts[parts.length - 1];
-  current[lastPart] = value;
+  if (lastPart) {
+    current[lastPart] = value;
+  }
 }
 
 /**

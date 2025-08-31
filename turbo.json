@@ -1,6 +1,21 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "VY_OPENAI_API_KEY",
+    "VY_EMBEDDING_MODEL",
+    "VY_CHROMA_HOST",
+    "VY_CHROMA_PORT",
+    "VY_CHROMA_SSL",
+    "VY_CHROMA_API_KEY",
+    "VY_COLLECTION_NAME",
+    "VY_MAX_RETRIES",
+    "VY_TIMEOUT_MS",
+    "VY_MAX_BATCH_SIZE",
+    "XDG_CONFIG_HOME",
+    "NODE_ENV",
+    "VY_DEV"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

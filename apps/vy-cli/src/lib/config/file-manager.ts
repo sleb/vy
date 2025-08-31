@@ -7,34 +7,33 @@
  */
 
 import {
-    DEFAULT_CONFIG,
-    ENV_TO_CONFIG_PATH,
-    getConfigValue,
-    setConfigValue,
-    type ConfigFileInfo,
-    type PartialVyConfig,
-    type VyConfig,
-    type VyConfigWithSource,
-} from '@repo/core';
-import { promises as fs } from 'fs';
-import { homedir } from 'os';
-import { dirname, join } from 'path';
+  DEFAULT_CONFIG,
+  ENV_TO_CONFIG_PATH,
+  getConfigValue,
+  type ConfigFileInfo,
+  type PartialVyConfig,
+  type VyConfig,
+  type VyConfigWithSource,
+} from "@repo/core";
+import { promises as fs } from "fs";
+import { homedir } from "os";
+import { dirname, join } from "path";
 
 /**
  * Configuration file paths
  */
 export const CONFIG_PATHS = {
   // User config directory (~/.vy/)
-  USER_CONFIG_DIR: join(homedir(), '.vy'),
-  USER_CONFIG_FILE: join(homedir(), '.vy', 'config.json'),
+  USER_CONFIG_DIR: join(homedir(), ".vy"),
+  USER_CONFIG_FILE: join(homedir(), ".vy", "config.json"),
 
   // Local development config file
-  LOCAL_ENV_FILE: '.env',
+  LOCAL_ENV_FILE: ".env",
 
   // Backup locations
   XDG_CONFIG_DIR: process.env.XDG_CONFIG_HOME
-    ? join(process.env.XDG_CONFIG_HOME, 'vy')
-    : join(homedir(), '.config', 'vy'),
+    ? join(process.env.XDG_CONFIG_HOME, "vy")
+    : join(homedir(), ".config", "vy"),
 } as const;
 
 /**
@@ -55,20 +54,20 @@ export class ConfigFileManager {
   async loadConfig(): Promise<VyConfigWithSource> {
     // Start with defaults
     let config: VyConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-    const sources: VyConfigWithSource['sources'] = this.createDefaultSources();
+    const sources: VyConfigWithSource["sources"] = this.createDefaultSources();
 
     // Load user config file
     const userConfig = await this.loadUserConfig();
     if (userConfig) {
       config = this.mergeConfig(config, userConfig);
-      this.updateSources(sources, userConfig, 'user-config');
+      this.updateSources(sources, userConfig, "user-config");
     }
 
     // Load environment variables (highest precedence)
     const envConfig = this.loadEnvConfig();
     if (envConfig && Object.keys(envConfig).length > 0) {
       config = this.mergeConfig(config, envConfig);
-      this.updateSources(sources, envConfig, 'env-var');
+      this.updateSources(sources, envConfig, "env-var");
     }
 
     return { config, sources };
@@ -90,7 +89,7 @@ export class ConfigFileManager {
 
     // Write with restricted permissions (600 = owner read/write only)
     await fs.writeFile(this.userConfigPath, configJson, {
-      encoding: 'utf8',
+      encoding: "utf8",
       mode: 0o600, // Owner read/write only for security
     });
   }
@@ -109,13 +108,30 @@ export class ConfigFileManager {
   async setConfigValue(path: string, value: unknown): Promise<void> {
     // Load existing user config (not full merged config)
     const existingUserConfig = await this.loadUserConfig();
-    const updatedConfig = setConfigValue(
-      existingUserConfig || ({} as VyConfig),
-      path,
-      value,
-    );
 
-    await this.saveConfig(updatedConfig);
+    // We need to work with the partial config directly since setConfigValue expects a full VyConfig
+    // but we only want to save the user overrides
+    const updatedUserConfig = { ...existingUserConfig };
+
+    // Set the value in the partial config using dot notation
+    const parts = path.split(".");
+    let current: any = updatedUserConfig;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      if (!part) continue;
+      if (!current[part] || typeof current[part] !== "object") {
+        current[part] = {};
+      }
+      current = current[part];
+    }
+
+    const lastPart = parts[parts.length - 1];
+    if (lastPart) {
+      current[lastPart] = value;
+    }
+
+    await this.saveConfig(updatedUserConfig);
   }
 
   /**
@@ -134,7 +150,7 @@ export class ConfigFileManager {
         size: stats.size,
       };
     } catch (error: any) {
-      if (error.code === 'ENOENT') {
+      if (error.code === "ENOENT") {
         return {
           path: this.userConfigPath,
           exists: false,
@@ -187,7 +203,7 @@ export class ConfigFileManager {
     try {
       await fs.unlink(this.userConfigPath);
     } catch (error: any) {
-      if (error.code !== 'ENOENT') {
+      if (error.code !== "ENOENT") {
         throw error;
       }
     }
@@ -198,10 +214,10 @@ export class ConfigFileManager {
    */
   private async loadUserConfig(): Promise<PartialVyConfig | null> {
     try {
-      const configData = await fs.readFile(this.userConfigPath, 'utf8');
+      const configData = await fs.readFile(this.userConfigPath, "utf8");
       return JSON.parse(configData);
     } catch (error: any) {
-      if (error.code === 'ENOENT') {
+      if (error.code === "ENOENT") {
         return null; // File doesn't exist
       }
       throw new Error(`Failed to load config file: ${error.message}`);
@@ -231,8 +247,8 @@ export class ConfigFileManager {
   private parseEnvValue(value: string): unknown {
     // Boolean values
     const lower = value.toLowerCase();
-    if (lower === 'true' || lower === 'false') {
-      return lower === 'true';
+    if (lower === "true" || lower === "false") {
+      return lower === "true";
     }
 
     // Numeric values
@@ -249,14 +265,14 @@ export class ConfigFileManager {
    * Set nested value in object using dot notation
    */
   private setNestedValue(obj: any, path: string, value: unknown): void {
-    const parts = path.split('.');
+    const parts = path.split(".");
     let current = obj;
 
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
       if (!part) continue;
 
-      if (!current[part] || typeof current[part] !== 'object') {
+      if (!current[part] || typeof current[part] !== "object") {
         current[part] = {};
       }
       current = current[part];
@@ -275,7 +291,7 @@ export class ConfigFileManager {
     const result = { ...base };
 
     for (const [key, value] of Object.entries(partial)) {
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
         result[key] = this.mergeConfig(result[key] || {}, value);
       } else {
         result[key] = value;
@@ -288,28 +304,28 @@ export class ConfigFileManager {
   /**
    * Create default source tracking structure
    */
-  private createDefaultSources(): VyConfigWithSource['sources'] {
+  private createDefaultSources(): VyConfigWithSource["sources"] {
     const sources: any = {};
 
     // Initialize all paths to 'default'
-    const initializeSection = (section: any, prefix = '') => {
+    const initializeSection = (section: any, prefix = "") => {
       for (const [key, value] of Object.entries(section)) {
         const path = prefix ? `${prefix}.${key}` : key;
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
+        if (value && typeof value === "object" && !Array.isArray(value)) {
           sources[key] = sources[key] || {};
           initializeSection(value, path);
         } else {
           if (prefix) {
-            const parts = prefix.split('.');
+            const parts = prefix.split(".");
             let current = sources;
             for (const part of parts) {
               current[part] = current[part] || {};
               current = current[part];
             }
-            current[key] = 'default';
+            current[key] = "default";
           } else {
             sources[key] = sources[key] || {};
-            sources[key][key] = 'default';
+            sources[key][key] = "default";
           }
         }
       }
@@ -323,20 +339,20 @@ export class ConfigFileManager {
     sources.limits = {};
 
     // Set all fields to 'default' initially
-    Object.keys(DEFAULT_CONFIG.server).forEach(key => {
-      sources.server[key] = 'default';
+    Object.keys(DEFAULT_CONFIG.server).forEach((key) => {
+      sources.server[key] = "default";
     });
-    Object.keys(DEFAULT_CONFIG.vectorStore).forEach(key => {
-      sources.vectorStore[key] = 'default';
+    Object.keys(DEFAULT_CONFIG.vectorStore).forEach((key) => {
+      sources.vectorStore[key] = "default";
     });
-    Object.keys(DEFAULT_CONFIG.embedding).forEach(key => {
-      sources.embedding[key] = 'default';
+    Object.keys(DEFAULT_CONFIG.embedding).forEach((key) => {
+      sources.embedding[key] = "default";
     });
-    Object.keys(DEFAULT_CONFIG.logging).forEach(key => {
-      sources.logging[key] = 'default';
+    Object.keys(DEFAULT_CONFIG.logging).forEach((key) => {
+      sources.logging[key] = "default";
     });
-    Object.keys(DEFAULT_CONFIG.limits).forEach(key => {
-      sources.limits[key] = 'default';
+    Object.keys(DEFAULT_CONFIG.limits).forEach((key) => {
+      sources.limits[key] = "default";
     });
 
     return sources;
@@ -346,14 +362,14 @@ export class ConfigFileManager {
    * Update source tracking for changed values
    */
   private updateSources(
-    sources: VyConfigWithSource['sources'],
+    sources: VyConfigWithSource["sources"],
     config: any,
-    source: 'user-config' | 'env-var',
+    source: "user-config" | "env-var",
   ): void {
     const updateSection = (sourceSection: any, configSection: any) => {
       for (const [key, value] of Object.entries(configSection)) {
         if (value !== undefined) {
-          if (value && typeof value === 'object' && !Array.isArray(value)) {
+          if (value && typeof value === "object" && !Array.isArray(value)) {
             if (sourceSection[key]) {
               updateSection(sourceSection[key], value);
             }
