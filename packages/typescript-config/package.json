@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
+  "scripts": {
+    "type-check": "echo 'No TypeScript files to check in typescript-config'"
+  },
   "publishConfig": {
     "access": "public"
   }
