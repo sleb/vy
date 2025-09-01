@@ -234,4 +234,4 @@ if (process.argv.length <= 2) {
 }
 
 // Parse command line arguments
-program.parse();
+program.parse(process.argv);
