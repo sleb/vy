@@ -27,6 +27,35 @@ import {
 import { testConnection } from "../../lib/mcp-client.js";
 import { handleError, validateConfig } from "../../lib/utils.js";
 
+// Interface definitions for server command options
+interface StartOptions {
+  daemon?: boolean;
+  logLevel?: string;
+  verbose?: boolean;
+}
+
+interface StopOptions {
+  force?: boolean;
+  verbose?: boolean;
+}
+
+interface StatusOptions {
+  json?: boolean;
+  verbose?: boolean;
+}
+
+interface HealthOptions {
+  timeout?: string;
+  json?: boolean;
+  verbose?: boolean;
+}
+
+interface LogsOptions {
+  lines?: string;
+  follow?: boolean;
+  verbose?: boolean;
+}
+
 /**
  * Type guard to check if error is a NodeJS.ErrnoException
  */
@@ -48,7 +77,7 @@ const SERVER_LOG_FILE = join(homedir(), ".vy", "server.log");
 /**
  * Start the MCP server
  */
-async function start(options?: Record<string, unknown>): Promise<void> {
+async function start(options?: StartOptions): Promise<void> {
   const spinner = ora("Starting Vy MCP server...").start();
 
   try {
@@ -75,9 +104,9 @@ async function start(options?: Record<string, unknown>): Promise<void> {
     }
 
     // Prepare environment
-    const env = {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
-      VY_LOG_LEVEL: options?.logLevel || "info",
+      VY_LOG_LEVEL: (options?.logLevel as string) || "info",
     };
 
     // Start server process
@@ -89,7 +118,9 @@ async function start(options?: Record<string, unknown>): Promise<void> {
 
     if (options?.daemon) {
       // Daemon mode - detach and save PID
-      serverProcess.unref();
+      if (serverProcess.pid) {
+        serverProcess.unref();
+      }
       saveServerPid(serverProcess.pid!);
       spinner.succeed(
         `Server started in daemon mode (PID: ${serverProcess.pid})`,
@@ -143,7 +174,7 @@ async function start(options?: Record<string, unknown>): Promise<void> {
 /**
  * Stop the MCP server
  */
-async function stop(options?: Record<string, unknown>): Promise<void> {
+async function stop(options?: StopOptions): Promise<void> {
   const spinner = ora("Stopping Vy MCP server...").start();
 
   try {
@@ -197,7 +228,7 @@ async function stop(options?: Record<string, unknown>): Promise<void> {
 /**
  * Check server status
  */
-async function showStatus(options: Record<string, unknown>): Promise<void> {
+async function showStatus(options?: StatusOptions): Promise<void> {
   const spinner = ora("Checking server status...").start();
 
   try {
@@ -210,7 +241,7 @@ async function showStatus(options: Record<string, unknown>): Promise<void> {
       const statusData = {
         running: isRunning,
         pid: pid || null,
-        uptime: isRunning && pid ? getProcessUptime(pid) : null,
+        uptime: isRunning && pid ? getProcessUptime() : null,
         healthy: false,
       };
 
@@ -241,7 +272,7 @@ async function showStatus(options: Record<string, unknown>): Promise<void> {
       [
         "Uptime",
         isRunning && pid
-          ? formatDuration(getProcessUptime(pid))
+          ? formatDuration(getProcessUptime())
           : chalk.gray("N/A"),
       ],
     ];
@@ -293,9 +324,9 @@ async function showStatus(options: Record<string, unknown>): Promise<void> {
 /**
  * Perform health check
  */
-async function health(options?: Record<string, unknown>): Promise<void> {
+async function health(options?: HealthOptions): Promise<void> {
   const spinner = ora("Performing health check...").start();
-  const timeout = parseInt(options?.timeout || "5000");
+  const timeout = parseInt((options?.timeout as string) || "5000");
 
   try {
     // Check if server process is running
@@ -366,7 +397,7 @@ async function health(options?: Record<string, unknown>): Promise<void> {
 /**
  * View server logs
  */
-async function logs(options?: Record<string, unknown>): Promise<void> {
+async function logs(options?: LogsOptions): Promise<void> {
   try {
     if (!existsSync(SERVER_LOG_FILE)) {
       console.log(chalk.yellow("📜 No log file found"));
@@ -377,7 +408,7 @@ async function logs(options?: Record<string, unknown>): Promise<void> {
       return;
     }
 
-    const lines = parseInt(options?.lines || "50");
+    const lines = parseInt((options?.lines as string) || "50");
     const logContent = readFileSync(SERVER_LOG_FILE, "utf-8");
     const logLines = logContent.split("\n").filter((line) => line.trim());
 

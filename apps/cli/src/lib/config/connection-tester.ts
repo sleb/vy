@@ -167,22 +167,22 @@ export class ConnectionTester {
         };
       }
 
-      if (error.cause?.code === "ENOTFOUND") {
+      if ((error as any).cause?.code === "ENOTFOUND") {
         return {
           service: "OpenAI API",
           success: false,
           message: "DNS resolution failed - check internet connection",
-          details: { error: error.message },
+          details: { error: (error as Error).message },
           duration,
         };
       }
 
-      if (error.cause?.code === "ECONNREFUSED") {
+      if ((error as any).cause?.code === "ECONNREFUSED") {
         return {
           service: "OpenAI API",
           success: false,
           message: "Connection refused - service may be down",
-          details: { error: error.message },
+          details: { error: (error as Error).message },
           duration,
         };
       }
@@ -190,8 +190,8 @@ export class ConnectionTester {
       return {
         service: "OpenAI API",
         success: false,
-        message: `Connection failed: ${error.message}`,
-        details: { error: error.message },
+        message: `Connection failed: ${(error as Error).message}`,
+        details: { error: (error as Error).message },
         duration,
       };
     }
@@ -283,7 +283,10 @@ export class ConnectionTester {
         });
 
         if (versionResponse.ok) {
-          versionInfo = await versionResponse.json();
+          versionInfo = (await versionResponse.json()) as Record<
+            string,
+            unknown
+          >;
         }
       } catch {
         // Version endpoint not available - not critical
@@ -360,13 +363,13 @@ export class ConnectionTester {
         };
       }
 
-      if (error.cause?.code === "ENOTFOUND") {
+      if ((error as any).cause?.code === "ENOTFOUND") {
         return {
           service: "ChromaDB",
           success: false,
           message: `Cannot resolve hostname '${chromaHost}'`,
           details: {
-            error: error.message,
+            error: (error as Error).message,
             host: chromaHost,
             suggestion: "Check if ChromaDB host is correct and accessible",
           },
@@ -374,13 +377,13 @@ export class ConnectionTester {
         };
       }
 
-      if (error.cause?.code === "ECONNREFUSED") {
+      if ((error as any).cause?.code === "ECONNREFUSED") {
         return {
           service: "ChromaDB",
           success: false,
           message: `Connection refused to ${chromaHost}:${chromaPort}`,
           details: {
-            error: error.message,
+            error: (error as Error).message,
             url: baseUrl,
             suggestion: "Check if ChromaDB is running and port is correct",
           },
@@ -389,15 +392,15 @@ export class ConnectionTester {
       }
 
       if (
-        error.cause?.code === "CERT_HAS_EXPIRED" ||
-        error.cause?.code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE"
+        (error as any).cause?.code === "CERT_HAS_EXPIRED" ||
+        (error as any).cause?.code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE"
       ) {
         return {
           service: "ChromaDB",
           success: false,
           message: "SSL certificate verification failed",
           details: {
-            error: error.message,
+            error: (error as Error).message,
             url: baseUrl,
             suggestion:
               "Check SSL certificate validity or disable SSL if using local development",
@@ -409,9 +412,9 @@ export class ConnectionTester {
       return {
         service: "ChromaDB",
         success: false,
-        message: `Connection failed: ${error.message}`,
+        message: `Connection failed: ${(error as Error).message}`,
         details: {
-          error: error.message,
+          error: (error as Error).message,
           url: baseUrl,
         },
         duration,

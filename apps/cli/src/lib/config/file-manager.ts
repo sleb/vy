@@ -71,14 +71,20 @@ export class ConfigFileManager {
     // Load user config file
     const userConfig = await this.loadUserConfig();
     if (userConfig) {
-      config = this.mergeConfig(config, userConfig);
+      config = this.mergeConfig(
+        config as unknown as Record<string, unknown>,
+        userConfig as unknown as Record<string, unknown>,
+      ) as unknown as VyConfig;
       this.updateSources(sources, userConfig, "user-config");
     }
 
     // Load environment variables (highest precedence)
     const envConfig = this.loadEnvConfig();
     if (envConfig && Object.keys(envConfig).length > 0) {
-      config = this.mergeConfig(config, envConfig);
+      config = this.mergeConfig(
+        config as unknown as Record<string, unknown>,
+        envConfig as unknown as Record<string, unknown>,
+      ) as unknown as VyConfig;
       this.updateSources(sources, envConfig, "env-var");
     }
 
@@ -317,7 +323,10 @@ export class ConfigFileManager {
 
     for (const [key, value] of Object.entries(partial)) {
       if (value && typeof value === "object" && !Array.isArray(value)) {
-        result[key] = this.mergeConfig(result[key] || {}, value);
+        result[key] = this.mergeConfig(
+          (result[key] || {}) as Record<string, unknown>,
+          value as Record<string, unknown>,
+        );
       } else {
         result[key] = value;
       }
@@ -359,7 +368,7 @@ export class ConfigFileManager {
       }
     };
 
-    initializeSection(DEFAULT_CONFIG);
+    initializeSection(DEFAULT_CONFIG as unknown as Record<string, unknown>);
     // Create proper nested structure matching VyConfig
     sources.server = {};
     sources.vectorStore = {};
@@ -369,22 +378,22 @@ export class ConfigFileManager {
 
     // Set all fields to 'default' initially
     Object.keys(DEFAULT_CONFIG.server).forEach((key) => {
-      sources.server[key] = "default";
+      sources.server![key] = "default";
     });
     Object.keys(DEFAULT_CONFIG.vectorStore).forEach((key) => {
-      sources.vectorStore[key] = "default";
+      sources.vectorStore![key] = "default";
     });
     Object.keys(DEFAULT_CONFIG.embedding).forEach((key) => {
-      sources.embedding[key] = "default";
+      sources.embedding![key] = "default";
     });
     Object.keys(DEFAULT_CONFIG.logging).forEach((key) => {
-      sources.logging[key] = "default";
+      sources.logging![key] = "default";
     });
     Object.keys(DEFAULT_CONFIG.limits).forEach((key) => {
-      sources.limits[key] = "default";
+      sources.limits![key] = "default";
     });
 
-    return sources;
+    return sources as unknown as VyConfigWithSource["sources"];
   }
 
   /**

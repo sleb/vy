@@ -43,9 +43,22 @@ interface SearchOptions {
   verbose?: boolean;
 }
 
+interface ListOptions {
+  limit?: string;
+  since?: string;
+  until?: string;
+  minScore?: string;
+  sort?: string;
+  json?: boolean;
+  verbose?: boolean;
+}
+
 interface ContextOptions {
   query?: string;
   memories?: string;
+  recent?: string[];
+  maxMemories?: string;
+  maxTokens?: string;
   json?: boolean;
   verbose?: boolean;
 }
@@ -127,7 +140,10 @@ export async function capture(
 
     spinner.text = "Capturing memory...";
     const startTime = Date.now();
-    const result = await client.callTool("capture_conversation", args);
+    const result = await client.callTool(
+      "capture_conversation",
+      args as unknown as Record<string, unknown>,
+    );
     const duration = Date.now() - startTime;
 
     await client.close();
@@ -196,7 +212,10 @@ export async function search(
     // Connect and search
     const client = await createMcpClient();
     const startTime = Date.now();
-    const result = await client.callTool("search_memory", args);
+    const result = await client.callTool(
+      "search_memory",
+      args as unknown as Record<string, unknown>,
+    );
     const duration = Date.now() - startTime;
 
     await client.close();
@@ -228,12 +247,22 @@ export async function search(
       // Format as table
       const tableData = [["Score", "Type", "Date", "Snippet"]];
 
-      typedResult.results.forEach((memory: Record<string, unknown>) => {
+      typedResult.results.forEach((memory: any) => {
+        const score =
+          typeof memory.relevanceScore === "number"
+            ? (memory.relevanceScore * 100).toFixed(1) + "%"
+            : "0.0%";
+        const timestamp =
+          typeof memory.timestamp === "string"
+            ? memory.timestamp
+            : new Date().toISOString();
+        const content = memory.snippet || memory.content || "";
+
         tableData.push([
-          chalk.green((memory.relevanceScore * 100).toFixed(1) + "%"),
-          chalk.yellow(memory.type),
-          chalk.gray(formatTimestamp(memory.timestamp)),
-          formatMemory(memory.snippet || memory.content, 60),
+          chalk.green(score),
+          chalk.cyan(String(memory.type)),
+          chalk.gray(formatTimestamp(timestamp)),
+          formatMemory(content, 60),
         ]);
       });
 
@@ -300,48 +329,60 @@ export async function context(options: ContextOptions = {}): Promise<void> {
     const args: GetContextArgs = {
       ...(currentQuery && { currentQuery }),
       ...(options?.recent && { recentMessages: options.recent }),
-      maxMemories: parseInt(options?.maxMemories || "10"),
+      maxMemories: parseInt(options?.memories || "10"),
       maxTokens: parseInt(options?.maxTokens || "2000"),
     };
 
     // Connect and get context
     const client = await createMcpClient();
     const startTime = Date.now();
-    const result = await client.callTool("get_context", args);
+    const result = await client.callTool(
+      "get_context",
+      args as unknown as Record<string, unknown>,
+    );
     const duration = Date.now() - startTime;
 
     await client.close();
     spinner.succeed(`Context retrieved in ${formatDuration(duration)}`);
+    const typedResult = result as any;
 
     // Display results
-    if (result.success && result.memories?.length) {
+    if (typedResult.success && typedResult.memories?.length) {
       if (options?.json) {
-        console.log(JSON.stringify(result, null, 2));
+        console.log(JSON.stringify(typedResult, null, 2));
         return;
       }
 
       console.log(chalk.blue("\n🎯 Relevant context:"));
       console.log(
         chalk.gray(
-          `   ${result.memories.length} memories, ~${result.estimatedTokens} tokens\n`,
+          `   ${typedResult.memories.length} memories, ~${typedResult.estimatedTokens} tokens\n`,
         ),
       );
 
-      result.memories.forEach(
-        (memory: Record<string, unknown>, index: number) => {
-          const score = (memory.relevanceScore * 100).toFixed(1);
-          console.log(
-            chalk.green(
-              `${index + 1}. [${score}%] ${formatTimestamp(memory.timestamp)}`,
-            ),
-          );
-          console.log(chalk.gray(`   ${formatMemory(memory.content, 120)}\n`));
-        },
-      );
+      typedResult.memories.forEach((memory: any, index: number) => {
+        const score =
+          typeof memory.relevanceScore === "number"
+            ? (memory.relevanceScore * 100).toFixed(1)
+            : "0.0";
+        const timestamp =
+          typeof memory.timestamp === "string"
+            ? memory.timestamp
+            : new Date().toISOString();
+        const content =
+          typeof memory.content === "string" ? memory.content : "";
 
-      if (result.selectionReason) {
+        console.log(
+          chalk.green(
+            `${index + 1}. [${score}%] ${formatTimestamp(timestamp)}`,
+          ),
+        );
+        console.log(chalk.gray(`   ${formatMemory(content, 120)}\n`));
+      });
+
+      if (typedResult.selectionReason) {
         console.log(chalk.blue("🤔 Selection reasoning:"));
-        console.log(chalk.gray(`   ${result.selectionReason}`));
+        console.log(chalk.gray(`   ${typedResult.selectionReason}`));
       }
     } else {
       console.log(chalk.yellow("🎯 No relevant context found"));
@@ -377,48 +418,50 @@ export async function list(options: ListOptions = {}): Promise<void> {
     }
 
     const client = await createMcpClient();
-    const result = await client.callTool("search_memory", args);
+    const result = await client.callTool(
+      "search_memory",
+      args as unknown as Record<string, unknown>,
+    );
     await client.close();
 
-    spinner.succeed(`Loaded ${result.results?.length || 0} memories`);
+    const typedResult = result as any;
+    spinner.succeed(`Loaded ${typedResult.results?.length || 0} memories`);
 
-    if (result.success && result.results?.length) {
+    if (typedResult.success && typedResult.results?.length) {
       if (options?.json) {
-        console.log(JSON.stringify(result, null, 2));
+        console.log(JSON.stringify(typedResult, null, 2));
         return;
       }
 
       console.log(chalk.blue("\n📋 Your memories:"));
-      console.log(chalk.gray(`   Total: ${result.totalCount} memories\n`));
+      console.log(chalk.gray(`   Total: ${typedResult.totalCount} memories\n`));
 
       // Sort by date or relevance
       const sortField = options?.sort || "date";
-      const sortedResults = [...result.results].sort(
-        (a: Record<string, unknown>, b: Record<string, unknown>) => {
-          if (sortField === "relevance") {
-            return b.relevanceScore - a.relevanceScore;
-          }
-          return (
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-          );
-        },
-      );
+      const sortedResults = [...typedResult.results].sort((a: any, b: any) => {
+        if (sortField === "relevance") {
+          return (b.relevanceScore || 0) - (a.relevanceScore || 0);
+        }
+        return (
+          new Date(b.timestamp || 0).getTime() -
+          new Date(a.timestamp || 0).getTime()
+        );
+      });
 
-      sortedResults.forEach(
-        (memory: Record<string, unknown>, index: number) => {
-          console.log(
-            chalk.yellow(
-              `${index + 1}. ${formatTimestamp(memory.timestamp)} [${memory.type}]`,
-            ),
-          );
-          console.log(
-            chalk.gray(
-              `   ${formatMemory(memory.content || memory.snippet, 100)}`,
-            ),
-          );
-          console.log(chalk.gray(`   ID: ${memory.id}\n`));
-        },
-      );
+      sortedResults.forEach((memory: any, index: number) => {
+        const timestamp =
+          typeof memory.timestamp === "string"
+            ? memory.timestamp
+            : new Date().toISOString();
+        const content = memory.content || memory.snippet || "";
+        console.log(
+          chalk.yellow(
+            `${index + 1}. ${formatTimestamp(timestamp)} [${memory.type}]`,
+          ),
+        );
+        console.log(chalk.gray(`   ${formatMemory(content, 100)}`));
+        console.log(chalk.gray(`   ID: ${memory.id}\n`));
+      });
     } else {
       console.log(chalk.yellow("📋 No memories found"));
       console.log(
