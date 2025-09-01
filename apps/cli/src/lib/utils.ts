@@ -139,72 +139,6 @@ export function handleError(error: unknown, verbose = false): never {
 }
 
 /**
- * Format duration in milliseconds to human-readable format
- */
-export function formatDuration(ms: number): string {
-  if (ms < 1000) {
-    return `${ms}ms`;
-  } else if (ms < 60000) {
-    return `${(ms / 1000).toFixed(1)}s`;
-  } else {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}m ${seconds}s`;
-  }
-}
-
-/**
- * Format timestamp to human-readable format
- */
-export function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-
-  // Less than 1 minute ago
-  if (diffMs < 60000) {
-    return "just now";
-  }
-
-  // Less than 1 hour ago
-  if (diffMs < 3600000) {
-    const minutes = Math.floor(diffMs / 60000);
-    return `${minutes}m ago`;
-  }
-
-  // Less than 24 hours ago
-  if (diffMs < 86400000) {
-    const hours = Math.floor(diffMs / 3600000);
-    return `${hours}h ago`;
-  }
-
-  // Less than 7 days ago
-  if (diffMs < 604800000) {
-    const days = Math.floor(diffMs / 86400000);
-    return `${days}d ago`;
-  }
-
-  // More than 7 days ago - show actual date
-  return date.toLocaleDateString();
-}
-
-/**
- * Format file size in bytes to human-readable format
- */
-export function formatFileSize(bytes: number): string {
-  const units = ["B", "KB", "MB", "GB"];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
-  }
-
-  return `${size.toFixed(1)}${units[unitIndex]}`;
-}
-
-/**
  * Truncate text to specified length with ellipsis
  */
 export function truncate(text: string, maxLength: number): string {
@@ -213,16 +147,6 @@ export function truncate(text: string, maxLength: number): string {
   }
 
   return text.substring(0, maxLength - 3) + "...";
-}
-
-/**
- * Format memory content for display
- */
-export function formatMemory(content: string, maxLength: number = 100): string {
-  // Clean up whitespace and newlines
-  const cleaned = content.replace(/\s+/g, " ").replace(/\n+/g, " ").trim();
-
-  return truncate(cleaned, maxLength);
 }
 
 /**
